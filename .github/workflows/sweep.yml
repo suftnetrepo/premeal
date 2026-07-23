@@ -1,0 +1,23 @@
+name: Sweep worker
+
+# Vercel's free Hobby tier only allows cron jobs once per day (see
+# vercel.json's daily fallback entry) — nowhere near frequent enough for
+# this app's 30-minute confirmation windows and delivery slot expiry.
+# This runs the same sweep every 5 minutes for free, using two repo
+# settings configured under Settings -> Secrets and variables -> Actions:
+#   - Variable APP_URL: your deployed app's URL, e.g. https://premeal.vercel.app
+#   - Secret CRON_SECRET: must match the CRON_SECRET env var set in Vercel
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab, useful for testing
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the sweep endpoint
+        run: |
+          curl -sf "${{ vars.APP_URL }}/api/cron/sweep?secret=${{ secrets.CRON_SECRET }}" \
+            -o response.json -w "\nHTTP %{http_code}\n"
+          cat response.json

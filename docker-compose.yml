@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: premeal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: premeal
+      POSTGRES_PASSWORD: premeal
+      POSTGRES_DB: premeal
+    ports:
+      - "5432:5432"
+    volumes:
+      - premeal_pgdata:/var/lib/postgresql/data
+
+volumes:
+  premeal_pgdata:

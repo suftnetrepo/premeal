@@ -1,0 +1,496 @@
+// Pre-Meal — Prisma schema
+// Core model: DeliverySlot.bookedCount is the single source of truth for
+// capacity. Reservation happens via one atomic UPDATE (see lib/capacity.ts)
+// so two concurrent orders can never both take the last spot.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  RESTAURANT_OWNER
+  ADMIN
+}
+
+enum RestaurantApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING_CONFIRMATION    // just placed, card not charged, 30-min clock running
+  PAYMENT_ACTION_REQUIRED // restaurant accepted, but the card needs 3D Secure —
+                          // customer must complete it; see lib/payment-actions.ts
+  CONFIRMED               // restaurant accepted, card charged
+  DECLINED                // restaurant rejected, capacity released, no charge
+  EXPIRED                 // 30 min passed with no response, capacity released, no charge
+  CANCELLED               // customer cancelled before delivery
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  role         UserRole     @default(CUSTOMER)
+  createdAt    DateTime     @default(now())
+
+  // Created lazily on first checkout. Purely internal plumbing so a
+  // delayed off-session charge at confirmation time can succeed reliably
+  // — there is no "saved cards" UI; the customer re-enters their card at
+  // every checkout regardless.
+  stripeCustomerId String?
+
+  // Email verification — sent on signup, non-blocking (see
+  // src/lib/account-verification.ts): an unverified user can still use the
+  // app fully, they just see a dismissible nudge. Token is hashed at rest
+  // (SHA-256, via src/lib/tokens.ts) — the raw token only ever exists in
+  // the email link itself.
+  emailVerifiedAt                 DateTime?
+  emailVerificationTokenHash      String?   @unique
+  emailVerificationTokenExpiresAt DateTime?
+
+  // Password reset — same hashed-token pattern. requestPasswordReset()
+  // deliberately gives the same response whether or not the email exists,
+  // to avoid leaking which emails are registered.
+  passwordResetTokenHash      String?   @unique
+  passwordResetTokenExpiresAt DateTime?
+
+  // Bumped on password reset to invalidate every existing session cookie
+  // at once — see the sessionVersion check in src/lib/auth.ts. Sessions
+  // here are stateless signed cookies with no server-side store, so this
+  // is what "log out everywhere" actually means in this app.
+  sessionVersion Int @default(0)
+
+  restaurants  Restaurant[] // if role = RESTAURANT_OWNER
+  orders       Order[]
+  addresses    Address[]
+  reviews      Review[]
+  promoRedemptions PromoRedemption[]
+  subscription     Subscription?
+}
+
+// Saved delivery addresses. Free-text (same pattern as everywhere else
+// address is used in this app — see Order.deliveryAddress,
+// Restaurant.address) rather than structured street/city/postcode
+// fields, kept consistent rather than introducing a second convention.
+// Geocoded opportunistically (best-effort, not required to save) so
+// distance/radius features can reuse it later without a re-geocode.
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String?  // "Home", "Work", etc — optional, user's own words
+  address    String
+  latitude   Float?
+  longitude  Float?
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Restaurant {
+  id             String        @id @default(cuid())
+  ownerId        String
+  owner          User          @relation(fields: [ownerId], references: [id])
+  name           String
+  slug           String        @unique
+  cuisine        String
+  description    String?
+  imageUrl       String?
+  minOrderCents  Int           @default(1000)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+
+  // Set via /restaurant/location. All three are set together — see
+  // src/app/api/restaurant/location/route.ts. A restaurant with no
+  // latitude/longitude simply doesn't appear in address-filtered search
+  // (but still shows in the default unfiltered browse list), so adding
+  // this feature doesn't hide existing restaurants that haven't set it.
+  address           String?
+  latitude          Float?
+  longitude         Float?
+  deliveryRadiusKm  Float?
+
+  // Stripe Connect — required before this restaurant can actually receive
+  // a payout. Deliberately NOT required to go "Live" (see
+  // /restaurant/dashboard) — a restaurant can take orders before
+  // finishing this, but payouts simply won't fire until they do.
+  stripeAccountId          String?
+  stripeOnboardingComplete Boolean @default(false)
+
+  // Admin approval — a restaurant needs both this AND the usual
+  // menu/delivery setup to actually appear to customers (see the "Live"
+  // check in src/app/page.tsx and the restaurant dashboard). Defaults to
+  // PENDING for every new signup; see src/lib/admin.ts.
+  approvalStatus RestaurantApprovalStatus @default(PENDING)
+  approvalNote   String? // admin's reason, shown to the owner if rejected
+
+  // One-time flat signup fee — not recurring, unrelated to sales volume.
+  // Charged via Stripe Checkout in one-time "payment" mode (see
+  // src/lib/restaurant-fees.ts), required alongside menu/delivery setup
+  // and admin approval before a restaurant can go Live. signupFeeCents is
+  // a snapshot of what was actually charged (in case the flat fee amount
+  // changes later), not read from a live constant.
+  signupFeeCents                Int?
+  signupFeePaidAt                DateTime?
+  stripeSignupFeePaymentIntentId String?
+
+  // Denormalized/cached on every new review (see src/lib/reviews.ts) rather
+  // than computed live on every page load — a restaurant list page showing
+  // 20+ cards would otherwise mean 20+ aggregate queries just to render
+  // stars. averageRating is null (not 0) until the first review exists, so
+  // "no reviews yet" and "reviewed, badly" stay visually distinct.
+  averageRating  Float?
+  reviewCount    Int            @default(0)
+
+  menuItems      MenuItem[]
+  menuCategories MenuCategory[]
+  deliverySlots  DeliverySlot[]
+  reviews        Review[]
+  orders         Order[]
+  promoCodes     PromoCode[]
+}
+
+// Restaurant-defined menu sections (e.g. "Main Meals", "Extra/Sides",
+// "Drinks") — not a fixed global list, each restaurant builds their own.
+model MenuCategory {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int        @default(0)
+
+  menuItems    MenuItem[]
+
+  @@unique([restaurantId, name])
+}
+
+model MenuItem {
+  id             String       @id @default(cuid())
+  restaurantId   String
+  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id])
+  categoryId     String?
+  category       MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name           String
+  description    String?
+  priceCents     Int
+  imageUrl       String?
+  isAvailable    Boolean      @default(true)
+  isSeasonal     Boolean      @default(false)
+
+  orderItems     OrderItem[]
+  modifierGroups ModifierGroup[]
+}
+
+// A choice a customer makes when adding an item — e.g. "Choice of protein"
+// (minSelect 1, maxSelect 1) or "Extras" (minSelect 0, maxSelect 3).
+// minSelect 0 means optional; minSelect >= 1 means required.
+model ModifierGroup {
+  id         String           @id @default(cuid())
+  menuItemId String
+  menuItem   MenuItem         @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  name       String
+  minSelect  Int              @default(0)
+  maxSelect  Int              @default(1)
+  sortOrder  Int              @default(0)
+
+  options    ModifierOption[]
+}
+
+model ModifierOption {
+  id              String        @id @default(cuid())
+  groupId         String
+  group           ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name            String
+  priceDeltaCents Int           @default(0)
+  isAvailable     Boolean       @default(true)
+}
+
+// One bookable window for one restaurant on one date.
+// e.g. Sakura Sushi · 2026-07-10 · 18:00-19:00 · capacity 50
+model DeliverySlot {
+  id             String       @id @default(cuid())
+  restaurantId   String
+  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id])
+  date           DateTime     // delivery date (date part only, stored at midnight UTC)
+  windowStart    String       // "18:00"
+  windowEnd      String       // "19:00"
+  capacity       Int
+  bookedCount    Int          @default(0)
+  cutoffAt       DateTime     // orders must be placed before this instant
+
+  orders         Order[]
+
+  @@unique([restaurantId, date, windowStart])
+  @@index([restaurantId, date])
+}
+
+model Order {
+  id                   String       @id @default(cuid())
+  customerId           String
+  customer             User         @relation(fields: [customerId], references: [id])
+  restaurantId         String
+  restaurant           Restaurant   @relation(fields: [restaurantId], references: [id])
+  slotId               String
+  slot                 DeliverySlot @relation(fields: [slotId], references: [id])
+
+  status               OrderStatus  @default(PENDING_CONFIRMATION)
+
+  subtotalCents        Int
+  deliveryFeeCents     Int
+  discountCents        Int          @default(0) // from a promo code, see src/lib/promotions.ts
+  totalCents           Int          // subtotalCents + deliveryFeeCents - discountCents
+
+  // Snapshot, not a live join — a promo code's terms can change after an
+  // order used it, but the order should always show what actually applied.
+  promoCodeId          String?
+  promoCode            PromoCode?   @relation(fields: [promoCodeId], references: [id])
+
+  // Free delivery from an active subscription — separate from
+  // discountCents/promoCodeId. A subscriber's 5% discount and a promo code
+  // deliberately don't stack (see applyBenefits() in lib/promotions.ts);
+  // this flag records which one actually applied, for support/audit.
+  subscriptionBenefitApplied Boolean @default(false)
+
+  deliveryAddress      String
+  notes                String?
+
+  confirmationDeadline DateTime     // now() + 30 minutes at creation
+
+  // Captured at checkout (a fresh SetupIntent each order — no saved
+  // cards), used to actually charge the customer at confirmation time.
+  stripePaymentMethodId String?
+  stripePaymentIntentId String?
+
+  // Set when status = PAYMENT_ACTION_REQUIRED — the customer has this long
+  // to complete 3D Secure before the order auto-declines (capacity
+  // released, nothing was ever charged). See lib/payment-actions.ts.
+  paymentActionDeadline DateTime?
+
+  createdAt            DateTime     @default(now())
+  confirmedAt          DateTime?
+  declinedAt           DateTime?
+  expiredAt            DateTime?
+  cancelledAt          DateTime?
+  outForDeliveryAt     DateTime?
+  deliveredAt          DateTime?
+
+  // Customer can report a problem up to a cutoff after delivery; doing so
+  // blocks the restaurant payout. See lib/delivery.ts.
+  disputedAt           DateTime?
+  disputeReason        String?
+
+  // Set when an admin resolves a dispute — see src/lib/admin.ts. A
+  // resolution of "refunded" reuses the same stripeRefundId/refundedAt
+  // fields as customer/restaurant cancellations; "payout_released" just
+  // sets payoutEligibleAt back to now so the next payout sweep picks it up.
+  disputeResolvedAt    DateTime?
+  disputeResolution    String?
+
+  // Set when the system (not the restaurant) declines an order — right
+  // now that only happens if the charge at confirmation fails (e.g. card
+  // declined) or a required 3D Secure step wasn't completed in time.
+  // Distinguishes "restaurant said no" from "payment failed" for support
+  // purposes, even though both land on status = DECLINED.
+  failureReason        String?
+
+  // Set if the customer cancels a paid order (see lib/cancellation.ts).
+  // No refund fields are needed for the free-cancellation case
+  // (PENDING_CONFIRMATION / PAYMENT_ACTION_REQUIRED) since nothing was
+  // ever charged there.
+  stripeRefundId       String?
+  refundedAt           DateTime?
+
+  // Distinguishes a restaurant backing out of an order it already
+  // accepted (ran out of an ingredient, unexpected closure, etc.) from a
+  // customer-initiated cancellation — same CANCELLED status either way,
+  // but the customer-facing copy and the reason shown differ.
+  cancelledByRestaurant Boolean @default(false)
+  restaurantCancelReason String?
+
+  // Set at confirmation time (see lib/payments.ts): platformFeeCents is
+  // 12% of subtotalCents only — the restaurant keeps 100% of the delivery
+  // fee since they deliver themselves. restaurantPayoutCents is what
+  // actually gets transferred (totalCents - platformFeeCents).
+  platformFeeCents     Int?
+  restaurantPayoutCents Int?
+
+  // When the restaurant becomes eligible to be paid out (deliveredAt + a
+  // grace period), and when that payout actually went out.
+  payoutEligibleAt     DateTime?
+  payoutSentAt         DateTime?
+  stripeTransferId     String?
+
+  items                OrderItem[]
+  review               Review?
+
+  @@index([status, confirmationDeadline])
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id])
+  menuItemId    String
+  menuItem      MenuItem  @relation(fields: [menuItemId], references: [id])
+  nameSnapshot  String    // menu item name at time of order (menu can change later)
+  priceCents    Int       // base price at time of order (excludes modifiers)
+  quantity      Int
+  notes         String?
+
+  modifiers     OrderItemModifier[]
+}
+
+// Snapshot of a chosen modifier option at order time — no FK to
+// ModifierOption, same reasoning as nameSnapshot above: the restaurant's
+// menu can change after the order without altering order history.
+model OrderItemModifier {
+  id              String    @id @default(cuid())
+  orderItemId     String
+  orderItem       OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  groupName       String
+  optionName      String
+  priceDeltaCents Int
+}
+
+// One review per order — deliberately not a free-standing "leave a review
+// for any restaurant" feature, so every review is tied to something that
+// actually happened. Only allowed once Order.status = DELIVERED (see
+// src/lib/reviews.ts). No edit/delete yet — a customer gets one shot,
+// which is a reasonable v1 constraint, not a technical limitation.
+model Review {
+  id           String     @id @default(cuid())
+  orderId      String     @unique
+  order        Order      @relation(fields: [orderId], references: [id])
+  customerId   String
+  customer     User       @relation(fields: [customerId], references: [id])
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  rating       Int // 1-5
+  comment      String?
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId])
+}
+
+enum PromoDiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+// Admin-managed (see /admin/promotions), platform-wide unless restaurantId
+// is set. redemptionCount is a cached counter incremented atomically at
+// redemption time (same "single atomic UPDATE ... WHERE count < max"
+// pattern as DeliverySlot.bookedCount in lib/capacity.ts) — a
+// "read count, check in JS, then write" approach would let concurrent
+// checkouts both slip through past maxRedemptions.
+model PromoCode {
+  id                        String            @id @default(cuid())
+  code                      String            @unique // stored/compared uppercase
+  description               String?
+  discountType              PromoDiscountType
+  discountValue             Int               // percent (1-100) or cents, per discountType
+  minOrderCents             Int?
+  maxDiscountCents          Int?              // caps a PERCENTAGE discount; ignored for FIXED_AMOUNT
+  restaurantId              String?           // null = valid at any restaurant
+  restaurant                Restaurant?       @relation(fields: [restaurantId], references: [id])
+  validFrom                 DateTime?
+  validUntil                DateTime?
+  maxRedemptions            Int?              // null = unlimited
+  maxRedemptionsPerCustomer Int               @default(1)
+  redemptionCount           Int               @default(0)
+  isActive                  Boolean           @default(true)
+  createdAt                 DateTime          @default(now())
+
+  orders                    Order[]
+  redemptions               PromoRedemption[]
+}
+
+// One row per successful redemption — enforces maxRedemptionsPerCustomer
+// (count rows for this customer+code) separately from the atomic
+// redemptionCount check above (which enforces the total cap).
+model PromoRedemption {
+  id            String    @id @default(cuid())
+  promoCodeId   String
+  promoCode     PromoCode @relation(fields: [promoCodeId], references: [id])
+  customerId    String
+  customer      User      @relation(fields: [customerId], references: [id])
+  orderId       String    @unique
+  discountCents Int
+  createdAt     DateTime  @default(now())
+
+  @@index([promoCodeId, customerId])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+// Mirrors a Stripe Subscription object — Stripe's hosted Checkout and
+// Billing Portal do the actual subscribe/cancel/payment-update UI (see
+// src/lib/subscriptions.ts), this table is just our read model, kept in
+// sync via webhook events (src/app/api/webhooks/stripe/route.ts).
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique // one subscription per user
+  user                 User               @relation(fields: [userId], references: [id])
+  stripeSubscriptionId String             @unique
+  stripeCustomerId     String
+  status               SubscriptionStatus
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+// Admin-togglable at /admin/feature-flags — a way to turn optional
+// features on/off (e.g. subscriptions, before there's enough repeat-order
+// data to price them sensibly) without a code change or redeploy. See
+// src/lib/feature-flags.ts. A key with no row here defaults to enabled —
+// adding a new flag later shouldn't silently turn something off that
+// nobody configured yet.
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  enabled     Boolean  @default(true)
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+enum EmailQueueStatus {
+  PENDING
+  SENT
+  FAILED // gave up after maxAttempts — needs a human to look at lastError
+}
+
+// Retry queue for emails that failed to send on the first (synchronous)
+// attempt — see sendEmail() in src/lib/email.ts. The common case (Resend
+// is up) never touches this table at all; it only exists for the
+// transient-outage case, so a flaky send doesn't just silently vanish.
+// Swept by the same worker that runs every other background job in this
+// app (scripts/expire-orders-worker.ts) — no separate queue infra.
+model EmailQueueItem {
+  id          String           @id @default(cuid())
+  to          String
+  subject     String
+  html        String
+  attempts    Int              @default(0)
+  maxAttempts Int              @default(5)
+  status      EmailQueueStatus @default(PENDING)
+  lastError   String?
+  createdAt   DateTime         @default(now())
+  sentAt      DateTime?
+}
