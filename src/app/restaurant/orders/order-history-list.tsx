@@ -166,9 +166,22 @@ function exportOrdersToCsv(orders: Order[], restaurantName: string) {
   URL.revokeObjectURL(url);
 }
 
-export function OrderHistoryList({ orders, restaurantName }: { orders: Order[]; restaurantName: string }) {
+export function OrderHistoryList({
+  orders,
+  summaryOrders,
+  restaurantName,
+}: {
+  orders: Order[];
+  summaryOrders: Order[];
+  restaurantName: string;
+}) {
   const [selected, setSelected] = useState<Order | null>(null);
-  const prepSummary = computePrepSummary(orders);
+  // Deliberately computed from summaryOrders (the entire filtered set),
+  // not the paginated `orders` currently rendered as cards — see
+  // SUMMARY_SAFETY_CAP in page.tsx for why these are two different
+  // queries. A prep total or CSV export that silently only covered the
+  // current page would be wrong the moment there's a second page.
+  const prepSummary = computePrepSummary(summaryOrders);
 
   return (
     <>
@@ -177,7 +190,7 @@ export function OrderHistoryList({ orders, restaurantName }: { orders: Order[]; 
           <div className="flex items-center gap-2 mb-3">
             <ChefHat size={16} className="text-orange-600" strokeWidth={1.75} />
             <p className="text-sm font-semibold text-stone-900">
-              Prep summary <span className="font-normal text-stone-400">— {orders.length} order{orders.length === 1 ? "" : "s"} in this view</span>
+              Prep summary <span className="font-normal text-stone-400">— {summaryOrders.length} order{summaryOrders.length === 1 ? "" : "s"} in this view</span>
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -203,12 +216,12 @@ export function OrderHistoryList({ orders, restaurantName }: { orders: Order[]; 
 
       <div className="flex justify-end mb-3">
         <button
-          onClick={() => exportOrdersToCsv(orders, restaurantName)}
-          disabled={orders.length === 0}
+          onClick={() => exportOrdersToCsv(summaryOrders, restaurantName)}
+          disabled={summaryOrders.length === 0}
           className="flex items-center gap-1.5 text-xs border border-stone-200 rounded-full px-3 py-1.5 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Download size={13} strokeWidth={1.75} />
-          Export CSV ({orders.length})
+          Export CSV ({summaryOrders.length})
         </button>
       </div>
 

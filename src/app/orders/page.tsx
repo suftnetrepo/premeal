@@ -3,8 +3,11 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatMoney, formatDate } from "@/lib/format";
+import { Pagination } from "@/app/components/pagination";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 20;
 
 const statusStyles: Record<string, string> = {
   PENDING_CONFIRMATION: "bg-amber-100 text-amber-700",
@@ -26,15 +29,28 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
-export default async function OrderHistoryPage() {
+export default async function OrderHistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const orders = await prisma.order.findMany({
-    where: { customerId: user.id },
-    include: { items: true, restaurant: true, slot: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const { page } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+
+  const [totalCount, orders] = await Promise.all([
+    prisma.order.count({ where: { customerId: user.id } }),
+    prisma.order.findMany({
+      where: { customerId: user.id },
+      include: { items: true, restaurant: true, slot: true },
+      orderBy: { createdAt: "desc" },
+      skip: (currentPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 w-full">
@@ -72,6 +88,12 @@ export default async function OrderHistoryPage() {
           </p>
         )}
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        buildHref={(p) => (p === 1 ? "/orders" : `/orders?page=${p}`)}
+      />
     </main>
   );
 }

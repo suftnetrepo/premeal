@@ -6,8 +6,18 @@ import { formatDate } from "@/lib/format";
 import type { OrderStatus } from "@prisma/client";
 import { ClipboardList } from "lucide-react";
 import { OrderHistoryList } from "./order-history-list";
+import { Pagination } from "@/app/components/pagination";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 20;
+// Upper bound for the prep-summary/CSV-export query specifically — not a
+// page size. Deliberately much higher than PAGE_SIZE: those two features
+// need the *entire* filtered set to stay correct (a prep total or a CSV
+// export that silently excludes everything past the current page would
+// be actively misleading, not just incomplete), but an unbounded query
+// still isn't safe forever, hence a generous but real ceiling.
+const SUMMARY_SAFETY_CAP = 2000;
 
 const FILTERS: { label: string; value: OrderStatus | "ALL" }[] = [
   { label: "All", value: "ALL" },
@@ -45,7 +55,7 @@ function dateKeyToRange(key: string): { start: Date; end: Date } {
 export default async function RestaurantOrderHistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; date?: string }>;
+  searchParams: Promise<{ status?: string; date?: string; page?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -54,9 +64,10 @@ export default async function RestaurantOrderHistoryPage({
   const restaurant = await prisma.restaurant.findFirst({ where: { ownerId: user.id } });
   if (!restaurant) redirect("/restaurant/dashboard");
 
-  const { status, date } = await searchParams;
+  const { status, date, page } = await searchParams;
   const activeFilter = status ?? "ALL";
   const activeDate = date ?? "ALL";
+  const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
   const statusWhere =
     activeFilter === "ALL"
@@ -73,6 +84,13 @@ export default async function RestaurantOrderHistoryPage({
       ? {}
       : { slot: { date: { gte: dateKeyToRange(activeDate).start, lt: dateKeyToRange(activeDate).end } } };
 
+  const where = { restaurantId: restaurant.id, ...statusWhere, ...dateWhere };
+  const orderInclude = {
+    items: { include: { modifiers: true } },
+    customer: true,
+    slot: true,
+  };
+
   // Real delivery dates that actually have orders, not a decorative
   // calendar picker — same principle as the cuisine chips on the
   // homepage being computed from what's actually available. Sourced
@@ -88,25 +106,50 @@ export default async function RestaurantOrderHistoryPage({
     new Map<string, Date>(slotDates.map((o) => [toDateKey(o.slot.date), o.slot.date])).values()
   );
 
-  // Full detail, not just the summary the list itself needs — the drawer
-  // shows everything from here, no second fetch when an order is opened.
-  const orders = await prisma.order.findMany({
-    where: { restaurantId: restaurant.id, ...statusWhere, ...dateWhere },
-    include: {
-      items: { include: { modifiers: true } },
-      customer: true,
-      slot: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  // Three queries: the total count (for page numbers), the current
+  // page's orders (what's actually rendered as cards), and the entire
+  // filtered set up to a safety cap (feeding prep summary + CSV export —
+  // see SUMMARY_SAFETY_CAP above for why this is deliberately separate
+  // from the paginated query rather than reusing its result).
+  const [totalCount, orders, summaryOrders] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.findMany({
+      where,
+      include: orderInclude,
+      orderBy: { createdAt: "desc" },
+      skip: (currentPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.order.findMany({
+      where,
+      include: orderInclude,
+      orderBy: { createdAt: "desc" },
+      take: SUMMARY_SAFETY_CAP,
+    }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  function buildHref(overrides: { status?: string; date?: string }) {
+  // Filter links deliberately omit the page param entirely — changing a
+  // filter always resets to page 1, since the current page number may
+  // not even exist under the new filter (e.g. page 3 of "All" might be
+  // page 1 of "Delivered" or might not exist at all).
+  function buildFilterHref(overrides: { status?: string; date?: string }) {
     const params = new URLSearchParams();
     const nextStatus = overrides.status ?? status;
     const nextDate = overrides.date ?? date;
     if (nextStatus) params.set("status", nextStatus);
     if (nextDate) params.set("date", nextDate);
+    const qs = params.toString();
+    return qs ? `/restaurant/orders?${qs}` : "/restaurant/orders";
+  }
+
+  // The pagination controls, by contrast, only ever change the page —
+  // current filters are preserved exactly.
+  function buildPageHref(targetPage: number) {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (date) params.set("date", date);
+    if (targetPage > 1) params.set("page", String(targetPage));
     const qs = params.toString();
     return qs ? `/restaurant/orders?${qs}` : "/restaurant/orders";
   }
@@ -125,7 +168,7 @@ export default async function RestaurantOrderHistoryPage({
         {FILTERS.map((f) => (
           <Link
             key={f.value}
-            href={buildHref({ status: f.value === "ALL" ? undefined : f.value })}
+            href={buildFilterHref({ status: f.value === "ALL" ? undefined : f.value })}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full border ${
               activeFilter === f.value ? "bg-stone-900 text-white border-stone-900" : "border-stone-200 text-stone-600"
             }`}
@@ -138,7 +181,7 @@ export default async function RestaurantOrderHistoryPage({
       {availableDates.length > 0 && (
         <div className="flex gap-2 overflow-x-auto mb-6 pb-1">
           <Link
-            href={buildHref({ date: undefined })}
+            href={buildFilterHref({ date: undefined })}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full border ${
               activeDate === "ALL" ? "bg-orange-50 text-orange-700 border-orange-200" : "border-stone-200 text-stone-500"
             }`}
@@ -150,7 +193,7 @@ export default async function RestaurantOrderHistoryPage({
             return (
               <Link
                 key={iso}
-                href={buildHref({ date: iso })}
+                href={buildFilterHref({ date: iso })}
                 className={`shrink-0 text-xs px-3 py-1.5 rounded-full border ${
                   activeDate === iso ? "bg-orange-50 text-orange-700 border-orange-200" : "border-stone-200 text-stone-500"
                 }`}
@@ -162,7 +205,9 @@ export default async function RestaurantOrderHistoryPage({
         </div>
       )}
 
-      <OrderHistoryList orders={orders} restaurantName={restaurant.name} />
+      <OrderHistoryList orders={orders} summaryOrders={summaryOrders} restaurantName={restaurant.name} />
+
+      <Pagination currentPage={currentPage} totalPages={totalPages} buildHref={buildPageHref} />
     </main>
   );
 }
