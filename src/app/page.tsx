@@ -144,7 +144,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   before launch. Lorem Picsum, seeded for a stable image
                   across reloads rather than a random one every render. */}
               <Image
-                src="https://picsum.photos/seed/premeal-hero/1200/1000"
+                src="/hero.jpg"
                 alt=""
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
@@ -158,18 +158,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <div className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-orange-50 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-black/0 to-black/0" />
 
-              <div className="relative bg-white/90 backdrop-blur rounded-2xl shadow-xl p-6 w-72 -rotate-3 border border-white">
-                <p className="text-[10px] font-semibold tracking-widest text-stone-400 mb-2">
-                  YOUR DELIVERY SLOT
-                </p>
-                <p className="text-xl font-bold text-stone-900 leading-tight">Fri 18:00–19:00</p>
-                <p className="text-sm text-stone-500 mt-0.5">Sakura Sushi</p>
-                <div className="border-t border-dashed border-stone-200 my-4" />
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={18} className="text-green-600" strokeWidth={2} />
-                  <p className="text-sm font-medium text-green-700">Confirmed in 12 min</p>
-                </div>
-              </div>
+          
             </div>
           </div>
 
