@@ -1,12 +1,12 @@
 name: Sweep worker
 
-# Vercel's free Hobby tier only allows cron jobs once per day (see
-# vercel.json's daily fallback entry) — nowhere near frequent enough for
-# this app's 30-minute confirmation windows and delivery slot expiry.
-# This runs the same sweep every 5 minutes for free, using two repo
-# settings configured under Settings -> Secrets and variables -> Actions:
-#   - Variable APP_URL: your deployed app's URL, e.g. https://premeal.vercel.app
-#   - Secret CRON_SECRET: must match the CRON_SECRET env var set in Vercel
+# Render's Background Worker service has no free tier — this runs the
+# same sweep every 5 minutes for free instead, using two GitHub Actions
+# settings scoped to the "Pre-Meal-Config" environment (Settings ->
+# Environments -> Pre-Meal-Config):
+#   - Variable APP_URL: your deployed Render URL, e.g. https://premeal.onrender.com
+#   - Secret CRON_SECRET: must match the CRON_SECRET env var set on the
+#     Render Web Service
 on:
   schedule:
     - cron: "*/5 * * * *"
@@ -15,6 +15,10 @@ on:
 jobs:
   sweep:
     runs-on: ubuntu-latest
+    # Required — without this, the job can't see APP_URL/CRON_SECRET at
+    # all, since they're scoped to this named environment, not the repo
+    # itself. Must match the environment name exactly (case-sensitive).
+    environment: Pre-Meal-Config
     steps:
       - name: Call the sweep endpoint
         run: |
