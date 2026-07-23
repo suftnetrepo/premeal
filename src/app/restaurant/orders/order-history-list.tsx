@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Mail, MapPin, StickyNote, Printer, Download } from "lucide-react";
+import { X, Mail, MapPin, StickyNote, Printer, Download, ChefHat } from "lucide-react";
 import { formatMoney, formatDate } from "@/lib/format";
 
 type OrderItemModifier = { id: string; groupName: string; optionName: string; priceDeltaCents: number };
@@ -64,6 +64,53 @@ function relevantTimestamp(order: Order): { label: string; date: Date } | null {
   return null;
 }
 
+type PrepSummaryItem = {
+  name: string;
+  totalQty: number;
+  // Only populated when this item's modifiers actually vary across the
+  // filtered orders (e.g. some Large, some Regular) — a plain item with
+  // no options never grows a pointless single-line breakdown repeating
+  // its own total.
+  breakdown: { label: string; qty: number }[];
+};
+
+// Grouped by item name + modifier combination, not just item name —
+// "Lasagna (Large)" and "Lasagna (Regular)" are prepared differently, so
+// collapsing them into one number would make the total actively
+// misleading for kitchen prep, not just imprecise.
+function computePrepSummary(orders: Order[]): PrepSummaryItem[] {
+  const groups = new Map<string, { name: string; modifierLabel: string; qty: number }>();
+
+  for (const order of orders) {
+    for (const item of order.items) {
+      const modifierLabel = item.modifiers.map((m) => m.optionName).sort().join(", ");
+      const key = `${item.nameSnapshot}::${modifierLabel}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.qty += item.quantity;
+      } else {
+        groups.set(key, { name: item.nameSnapshot, modifierLabel, qty: item.quantity });
+      }
+    }
+  }
+
+  const byName = new Map<string, PrepSummaryItem>();
+  for (const g of groups.values()) {
+    let entry = byName.get(g.name);
+    if (!entry) {
+      entry = { name: g.name, totalQty: 0, breakdown: [] };
+      byName.set(g.name, entry);
+    }
+    entry.totalQty += g.qty;
+    if (g.modifierLabel) {
+      entry.breakdown.push({ label: g.modifierLabel, qty: g.qty });
+    }
+  }
+
+  // Highest-demand items first — the ones worth starting prep on first.
+  return Array.from(byName.values()).sort((a, b) => b.totalQty - a.totalQty);
+}
+
 // Wraps in quotes and escapes internal quotes per the CSV spec — without
 // this, a customer name with a comma or an address with a quote in it
 // would silently corrupt the column alignment for every row after it.
@@ -121,9 +168,39 @@ function exportOrdersToCsv(orders: Order[], restaurantName: string) {
 
 export function OrderHistoryList({ orders, restaurantName }: { orders: Order[]; restaurantName: string }) {
   const [selected, setSelected] = useState<Order | null>(null);
+  const prepSummary = computePrepSummary(orders);
 
   return (
     <>
+      {prepSummary.length > 0 && (
+        <div className="border border-stone-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ChefHat size={16} className="text-orange-600" strokeWidth={1.75} />
+            <p className="text-sm font-semibold text-stone-900">
+              Prep summary <span className="font-normal text-stone-400">— {orders.length} order{orders.length === 1 ? "" : "s"} in this view</span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {prepSummary.map((item) => (
+              <div
+                key={item.name}
+                className="bg-orange-50 border border-orange-100 rounded-lg px-3 py-2"
+                title={item.breakdown.map((b) => `${b.label}: ${b.qty}`).join(", ") || undefined}
+              >
+                <p className="text-sm text-stone-900">
+                  <span className="font-semibold">{item.name}</span> ×{item.totalQty}
+                </p>
+                {item.breakdown.length > 1 && (
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    {item.breakdown.map((b) => `${b.label}: ${b.qty}`).join(" · ")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end mb-3">
         <button
           onClick={() => exportOrdersToCsv(orders, restaurantName)}
