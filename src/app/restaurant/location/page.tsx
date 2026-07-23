@@ -65,7 +65,7 @@ export default function LocationPage() {
         Since you deliver yourself, this is how far you&apos;re willing to drive — not a marketplace-wide setting.
       </p>
 
-      <ProfileImageUpload initialUrl={imageUrl} onUploaded={setImageUrl} />
+      <ProfileImageUpload key={imageUrl ?? "loading"} initialUrl={imageUrl} onUploaded={setImageUrl} />
 
       <div className="flex flex-col gap-3 max-w-md">
         <label className="text-xs text-stone-500">

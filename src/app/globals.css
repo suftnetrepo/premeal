@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Printing an order receipt (src/app/restaurant/orders/order-history-list.tsx):
+   hides everything on the page except the element marked #print-receipt,
+   regardless of what else is on screen (sidebar nav, the drawer backdrop,
+   the list behind it) — more robust than adding a print:hidden class to
+   every other component individually, since it can't be defeated by a
+   future component that forgets to add that class. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-receipt,
+  #print-receipt * {
+    visibility: visible;
+  }
+  #print-receipt {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
