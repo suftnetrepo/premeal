@@ -133,10 +133,17 @@ export default async function RestaurantOrderHistoryPage({
   // filter always resets to page 1, since the current page number may
   // not even exist under the new filter (e.g. page 3 of "All" might be
   // page 1 of "Delivered" or might not exist at all).
-  function buildFilterHref(overrides: { status?: string; date?: string }) {
+  // `null` explicitly means "clear this filter"; a key simply not present
+  // in `overrides` means "leave it as whatever it currently is." Those
+  // need to be distinguishable — `overrides.date ?? date` can't tell the
+  // difference between "date wasn't mentioned" and "date was explicitly
+  // set to undefined to clear it" (both just look like `undefined` to
+  // `??`), which is exactly why "All dates" and "All" status previously
+  // fell back to whatever filter was already active instead of clearing it.
+  function buildFilterHref(overrides: { status?: string | null; date?: string | null }) {
     const params = new URLSearchParams();
-    const nextStatus = overrides.status ?? status;
-    const nextDate = overrides.date ?? date;
+    const nextStatus = overrides.status === null ? undefined : (overrides.status ?? status);
+    const nextDate = overrides.date === null ? undefined : (overrides.date ?? date);
     if (nextStatus) params.set("status", nextStatus);
     if (nextDate) params.set("date", nextDate);
     const qs = params.toString();
@@ -168,7 +175,7 @@ export default async function RestaurantOrderHistoryPage({
         {FILTERS.map((f) => (
           <Link
             key={f.value}
-            href={buildFilterHref({ status: f.value === "ALL" ? undefined : f.value })}
+            href={buildFilterHref({ status: f.value === "ALL" ? null : f.value })}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full border ${
               activeFilter === f.value ? "bg-stone-900 text-white border-stone-900" : "border-stone-200 text-stone-600"
             }`}
@@ -181,7 +188,7 @@ export default async function RestaurantOrderHistoryPage({
       {availableDates.length > 0 && (
         <div className="flex gap-2 overflow-x-auto mb-6 pb-1">
           <Link
-            href={buildFilterHref({ date: undefined })}
+            href={buildFilterHref({ date: null })}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full border ${
               activeDate === "ALL" ? "bg-orange-50 text-orange-700 border-orange-200" : "border-stone-200 text-stone-500"
             }`}
