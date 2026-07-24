@@ -10,7 +10,7 @@ export async function POST(
   const { id } = await params;
 
   const user = await getCurrentUser();
-  if (!user || user.role !== "RESTAURANT_OWNER") {
+  if (!user || (user.role !== "RESTAURANT_OWNER" && user.role !== "DRIVER")) {
     return NextResponse.json({ error: "Not authorized" }, { status: 401 });
   }
 

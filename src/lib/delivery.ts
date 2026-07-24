@@ -37,14 +37,14 @@ export class NotAuthorizedError extends Error {
   }
 }
 
-/** Restaurant dispatches the order. */
-export async function markOutForDelivery(orderId: string, ownerId: string) {
+/** Restaurant owner or the order's assigned driver dispatches the order. */
+export async function markOutForDelivery(orderId: string, userId: string) {
   const order = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUniqueOrThrow({
       where: { id: orderId },
       include: { restaurant: true },
     });
-    if (order.restaurant.ownerId !== ownerId) throw new NotAuthorizedError();
+    if (order.restaurant.ownerId !== userId && order.driverId !== userId) throw new NotAuthorizedError();
     if (order.status !== OrderStatus.CONFIRMED) {
       throw new OrderStatusError(`Order is "${order.status}", not confirmed — can't dispatch it.`);
     }
@@ -59,14 +59,14 @@ export async function markOutForDelivery(orderId: string, ownerId: string) {
   return order;
 }
 
-/** Restaurant marks delivered. Starts the payout-eligibility clock. */
-export async function markDelivered(orderId: string, ownerId: string) {
+/** Restaurant owner or the order's assigned driver marks delivered. Starts the payout-eligibility clock. */
+export async function markDelivered(orderId: string, userId: string) {
   const order = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUniqueOrThrow({
       where: { id: orderId },
       include: { restaurant: true },
     });
-    if (order.restaurant.ownerId !== ownerId) throw new NotAuthorizedError();
+    if (order.restaurant.ownerId !== userId && order.driverId !== userId) throw new NotAuthorizedError();
     if (order.status !== OrderStatus.OUT_FOR_DELIVERY) {
       throw new OrderStatusError(`Order is "${order.status}", not out for delivery yet.`);
     }

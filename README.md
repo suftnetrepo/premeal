@@ -682,6 +682,300 @@ since both would have been wrong foundations to build screens on top of:
   homepage and the API route now, so this can't drift apart again the way
   it just did.
 
+## Drivers — restaurants can now delegate delivery to their own staff
+
+Previously, "restaurants self-deliver" meant the owner personally
+delivers every order. This adds a real `DRIVER` role: a restaurant
+invites people to deliver for them, and a driver can work for **more
+than one restaurant** at once (many-to-many, not exclusive to one) — an
+independent driver isn't forced into a separate account per restaurant
+they work with.
+
+**The model**: `RestaurantDriver` is the join table between a restaurant
+and a driver, carrying its own lifecycle (`PENDING` → `ACTIVE` /
+`DECLINED` / `REMOVED`). `Order.driverId` is who's actually assigned to
+a specific delivery.
+
+**Onboarding, two distinct paths** (`src/lib/drivers.ts`, `inviteDriver`):
+1. **Brand-new email** (no DRIVER account exists yet) — an invite token
+   is issued (same hashed-token pattern as email verification/password
+   reset), emailed as a signup link. Signing up through that link
+   creates the account **and** accepts the invite in one step — going
+   through the link at all *is* the acceptance, there's no separate
+   later "accept" click for this path.
+2. **Existing driver** — no token needed, but critically, **no
+   automatic access either**. The restaurant's invite creates a
+   `PENDING` association and emails the driver; they have to explicitly
+   accept or decline from their own dashboard (`/driver/dashboard`)
+   before that restaurant can assign them anything. A restaurant can
+   never silently claim a driver's account just by knowing their email —
+   this was a deliberate security requirement discussed before writing
+   any code, not an afterthought.
+
+**Real security boundaries enforced, not just assumed**:
+- `assignDriverToOrder` only allows assigning from that restaurant's own
+  `ACTIVE` roster — never an arbitrary DRIVER-role account that happens
+  to exist elsewhere on the platform.
+- `markOutForDelivery`/`markDelivered` (the actual delivery status
+  transitions) now authorize either the restaurant owner **or** the
+  order's specifically-assigned driver — not "any driver associated with
+  this restaurant," and not any other restaurant's driver either.
+- `removeDriverFromRestaurant` blocks removal while that driver has an
+  active, undelivered order assigned to them at that restaurant — a
+  silent removal would leave a real in-flight delivery with no one
+  authorized to update it. The restaurant has to reassign first.
+- A restaurant's own roster view and a driver's own "pending requests"
+  view are each scoped strictly to their own side of the relationship —
+  a restaurant never sees a shared driver's other restaurants.
+
+**New routes**: `/restaurant/drivers` (roster management — invite,
+list, remove), `/driver/dashboard` (pending requests to accept/decline,
+assigned deliveries with status-update buttons), `/driver/accept-invite`
+(public signup page for the brand-new-driver path). Driver assignment
+itself lives inline in the existing order drawer on
+`/restaurant/orders`, not a separate page.
+
+**A verification limitation worth being upfront about**: this sandbox's
+network restriction that's come up before (blocking
+`binaries.prisma.sh`) meant `prisma generate` could not produce a real
+generated client for this session — every attempt, including retries,
+failed the same way. That means the usual `tsc`-based verification this
+whole build has relied on wasn't fully available for this feature.
+ESLint ran clean, and every Prisma call in the new code
+(`src/lib/drivers.ts`, every new API route, the schema itself) was
+manually cross-checked field-by-field and relation-by-relation against
+the actual schema rather than trusted blind — but that's a real step
+down from an actual passing type-check, and it's worth running
+`npx prisma generate && npx tsc --noEmit` yourself once this is in an
+environment with normal network access, before treating this as fully
+verified.
+
+## Bug found via live testing: "All dates" / "All" status didn't clear
+
+**Root cause**: a real JavaScript ambiguity in `buildFilterHref`, not a
+logic mistake in the filter concept itself. It used
+`overrides.date ?? date` to decide the next date — but `??` can't tell
+the difference between "the caller didn't mention `date` at all" (keep
+the current one) and "the caller explicitly passed `date: undefined` to
+clear it" — both just look like `undefined` to `??`. The "All dates"
+link called `buildFilterHref({ date: undefined })` intending to clear
+the filter, but it silently fell back to whatever date was already
+active instead — same bug, same reason, for the "All" status tab.
+
+**Fix**: `null` now means "explicitly clear this filter," kept
+distinguishable from a key simply not being present in `overrides`
+(which still means "leave it as-is"). `buildFilterHref({ date: null })`
+unambiguously clears the date while preserving whatever status filter is
+active; `buildFilterHref({ status: null })` does the same for status.
+Traced through all four cases by hand (clear date, clear status, set a
+specific date, set a specific status) to confirm each now behaves
+correctly before shipping this.
+
+## Test order generator (for stress-testing the above)
+
+`scripts/seed-test-orders.ts` — a separate, on-demand script (not part of
+`npm run seed`, which sets up the clean baseline) that generates a batch
+of realistic test orders so pagination, the status/date filters, prep
+summary, and CSV export all have real data to be tested against instead
+of the one or two orders placed by hand.
+
+```bash
+npx tsx scripts/seed-test-orders.ts        # 40 orders per restaurant
+npx tsx scripts/seed-test-orders.ts 100    # or specify a count
+```
+
+Safe to run more than once — each run adds more orders on top of
+whatever's already there, it doesn't reset anything. Bypasses
+`createOrder()` in `src/lib/capacity.ts` deliberately: that function's
+job is enforcing checkout business rules (slot capacity, Stripe charges,
+promo codes), none of which is what's being tested here, so Order rows
+are created directly — faster, and doesn't risk touching Stripe.
+
+What it actually varies, on purpose, not just row count:
+- **Status** — weighted realistically (mostly delivered/confirmed, like
+  a real restaurant's history, but enough of every other status that
+  every filter tab has something to show)
+- **Delivery date** — spread across 11 different days (past and
+  upcoming), so the date filter has real range to test
+- **Items and modifiers** — 1-3 random menu items per order, quantity
+  1-4 each, with a real modifier selection when the item has one (e.g.
+  Lasagna's Size) — this is specifically what makes the prep summary's
+  "Large: 3 · Regular: 2" breakdown line actually exercisable, not just
+  the simple total
+
+## Pagination (customer orders + restaurant order history)
+
+Both pages were previously unbounded or silently capped — the customer
+"My orders" page had no limit at all (would slowly get unwieldy with
+enough orders), and the restaurant order history page had a hard
+`take: 100` with zero way to see anything older once a restaurant
+crossed that number. Both now paginate properly, 20 per page,
+`src/app/components/pagination.tsx` shared between them (server-
+renderable — it's just Prev/Next links with a page-number indicator, no
+client state needed).
+
+**The one real design decision this raised**: the restaurant order
+history page also has "Prep summary" and "Export CSV," both of which
+previously operated on "whatever's loaded." Once pagination exists, that
+becomes ambiguous — current page only, or the entire filtered set? Went
+with **entire filtered set**, deliberately, even though it costs a
+second database query per page load:
+
+- A prep total that silently excluded orders past the current page would
+  be actively wrong for someone making a real "how much do I cook"
+  decision off it, not just incomplete.
+- A CSV export missing rows past page 1 is a genuinely dangerous kind of
+  bug — it looks complete (opens fine, has a header, has data) and the
+  gap usually isn't caught until a reconciliation doesn't add up weeks
+  later.
+
+So `page.tsx` now runs three queries in parallel per load: a `count()`
+for page numbers, a paginated `findMany()` for the rendered cards, and a
+third `findMany()` (same filters, no pagination, capped at
+`SUMMARY_SAFETY_CAP = 2000` as a real ceiling rather than truly
+unbounded) feeding prep summary and CSV export specifically. In
+practice, the date-filtered view (a single restaurant, a single day)
+will essentially never approach that cap — the cap mostly matters for
+someone exporting a full unfiltered order history.
+
+Filter links (status/date) deliberately omit the `page` param entirely,
+resetting to page 1 whenever a filter changes — the previous page number
+may not even exist under the new filter. The pagination controls, by
+contrast, only ever change `page`, preserving whatever filters are
+currently active.
+
+## Prep summary
+
+The natural next step after the delivery date filter: once you've
+narrowed the list to a specific day (and optionally a status), manually
+adding up "how many Lasagnas do I actually need to cook" across several
+individual order cards is exactly the kind of thing that should be
+automatic. Computed client-side from whatever's currently loaded — no
+new API call, and it always exactly matches the current status + date
+filter, the same "reflects what you're looking at" principle already
+used for CSV export.
+
+Grouped by item name **and** modifier combination, not just item name —
+"Lasagna (Large)" and "Lasagna (Regular)" get prepared differently, so
+collapsing them into one total would be actively misleading for
+kitchen prep, not just imprecise. The modifier breakdown line only shows
+when there's genuine variation (some Large, some Regular); a plain item
+with no options, or one where every instance happened to pick the same
+option, doesn't grow a pointless line repeating its own total. Sorted
+highest-demand first.
+
+## Delivery date filter
+
+**Bug found immediately via live testing, fixed the same day**: clicking
+a specific date showed zero orders, even for a date with a real,
+visible order on it. Root cause was a timezone mismatch, not a logic
+error — delivery slots are created with `dateAtMidnight()` (see
+`src/app/api/restaurant/slots/route.ts`), which uses `.setHours(0,0,0,0)`,
+i.e. midnight in the **server's local timezone**. The filter, though,
+built its comparison date by parsing a bare `"YYYY-MM-DD"` string with
+`new Date(...)`, which JavaScript always interprets as **UTC** midnight
+per the ISO spec. On a server that isn't running in UTC (Render's default
+depends on region/config, not guaranteed), those are two different
+timestamps for what's supposed to be the same calendar day — an exact
+equality match on `slot.date` therefore never matched, no matter how
+correct the date itself was. Fixed by making every date comparison in
+this file use the same local-timezone convention slot creation already
+uses (`toDateKey()`/`dateKeyToRange()`), and switching from an exact
+match to a `gte`/`lt` range covering the whole calendar day — tolerant of
+the time-of-day component regardless of what timezone the server actually
+runs in, rather than depending on getting that exactly right a second
+time.
+
+A second horizontal filter row alongside the existing status tabs, since
+restaurant owners naturally think in terms of "what am I preparing for
+Saturday," not just order status. Same principle as the cuisine chips on
+the homepage: the date options are computed from delivery dates that
+*actually have orders* for this restaurant, not a decorative calendar —
+sourced independent of whichever status filter is currently active, so
+switching status never makes a date option disappear mid-browse. The two
+filters compose (status AND date), both driven by URL search params so
+they're bookmarkable/shareable, same pattern as the existing status tabs.
+
+## Print receipt & CSV export
+
+Two real, requested features on the restaurant order history page —
+both operate on data already loaded on the page, no new API routes.
+
+- **Print receipt** — a printer icon in the order drawer's header calls
+  `window.print()`. The tricky part isn't triggering print, it's making
+  sure only the receipt prints, not the sidebar nav, the drawer's dark
+  backdrop, or the order list behind it. Handled with a global print rule
+  in `globals.css`: hide everything on the page, then make only the
+  element with `id="print-receipt"` visible again — more robust than
+  adding a `print:hidden` class to every other component individually,
+  since a future component can't accidentally break it by forgetting
+  that class. The restaurant's name is shown on the printed version only
+  (`print:block`) — redundant on screen, since you're already looking at
+  that restaurant's own order list, but necessary once the receipt is a
+  physical piece of paper that could get separated from its context.
+- **Export CSV** — exports whatever's currently loaded, which means it
+  naturally respects the existing status filter tabs (Awaiting response,
+  Confirmed, etc.) without any extra plumbing — "export what you're
+  looking at" falls out of the page's existing structure for free.
+  Proper CSV field escaping (quotes doubled, every field wrapped) so a
+  customer name or address containing a comma or a quote can't silently
+  corrupt the column alignment of every row after it — a real, easy-to-miss
+  bug in a lot of hand-rolled CSV export code. Includes a UTF-8 BOM so
+  Excel (still the most common thing this gets opened in) detects the
+  encoding correctly instead of mangling anything non-ASCII.
+
+## Two more bugs found via live usage
+
+- **Restaurant photo upload showed "Click to upload" even after a save
+  had already succeeded** — confirmed by the fact the homepage (a fresh
+  server-rendered page) showed the photo correctly the whole time; only
+  the upload widget itself was wrong. Root cause: classic React bug —
+  `ProfileImageUpload` initialized its local state from an `initialUrl`
+  prop via `useState(initialUrl)`, which only reads a prop's value once,
+  at mount. The parent page (`/restaurant/location`) fetches the real
+  `imageUrl` *asynchronously after* mounting the child with `null`, so
+  the child's internal state never picked up the real value once it
+  arrived. Fixed the React-recommended way — a `key={imageUrl ?? "loading"}`
+  on the parent's usage, which makes React treat the null-to-real-value
+  transition as a fresh component instance rather than syncing state via
+  an effect (the effect-based fix was tried first and correctly rejected
+  by this repo's lint rules, which flag `setState` inside `useEffect` as
+  an anti-pattern React itself recommends avoiding).
+- **Restaurant order cards showed items as one truncated horizontal
+  line** — fine for 2-3 items, actively broken for an order with many.
+  Fixed in `src/app/restaurant/orders/order-history-list.tsx`: the card
+  now shows a capped preview ("Item ×2 · Item ×1 · +3 more") that's
+  always accurate and never overflows, and clicking an order opens a
+  **right-side drawer** (chosen over a modal — it doesn't fully cover the
+  list behind it, so you don't lose your place) with full detail: customer
+  name/email, delivery address, order notes, every item with its
+  modifiers, dispute/cancellation info if present, and the real price
+  breakdown (subtotal/delivery/discount/total). Required widening what
+  the page fetches (items now include modifiers, customer now includes
+  email) and splitting the page into a server component (data) + client
+  component (the interactive list/drawer) — the same split pattern used
+  elsewhere in this app (e.g. `dashboard-client.tsx`) for exactly this
+  reason: keep data-fetching server-side, keep interactivity client-side.
+
+## Hero placeholder image removed
+
+The Lorem Picsum temp image (added earlier specifically as a "just get
+something in there for now" placeholder) started returning a random
+striped/pattern photo that isn't food at all — a real problem once the
+app is actually live and being shown to people, not just being tested
+locally. Rather than gamble on another random seed landing on something
+food-adjacent, reverted to the deliberate gradient + blur treatment used
+before the placeholder was ever added — no photo, but reads as
+"designed," not "unfinished." Also removed `picsum.photos` from
+`next.config.ts`'s allowed image domains, since nothing references it
+anymore.
+
+**When real food/restaurant photography is ready**: it's one `<Image>`
+block in `src/app/page.tsx`'s hero section — same spot the placeholder
+used to live — plus adding whichever domain it's hosted on (or
+`res.cloudinary.com`, already allowed, if uploaded through this app's
+own Cloudinary setup) to `next.config.ts`.
+
 ## Address autocomplete tightened to street-level results
 
 Found via real testing: the autocomplete would happily suggest county or

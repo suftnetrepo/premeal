@@ -10,6 +10,7 @@ import {
   CalendarDays,
   MapPin,
   Wallet,
+  Truck,
   LogOut,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ const ITEMS = [
   { href: "/restaurant/reviews", label: "Reviews", icon: Star },
   { href: "/restaurant/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/restaurant/deliveries", label: "Deliveries", icon: CalendarDays },
+  { href: "/restaurant/drivers", label: "Drivers", icon: Truck },
   { href: "/restaurant/location", label: "Location", icon: MapPin },
   { href: "/restaurant/payouts", label: "Payouts", icon: Wallet },
 ];

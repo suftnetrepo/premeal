@@ -392,3 +392,39 @@ export async function notifyPasswordReset(user: { email: string; name: string },
     console.error(`[notifications] notifyPasswordReset failed for ${user.email}:`, err);
   }
 }
+
+export async function notifyDriverInvite(email: string, restaurantName: string, token: string): Promise<void> {
+  try {
+    await safeSend(
+      email,
+      `${restaurantName} invited you to deliver on Pre-Meal`,
+      `<p>Hi,</p>
+       <p>${restaurantName} has invited you to be one of their delivery drivers on Pre-Meal.</p>
+       <p><a href="${APP_URL}/driver/accept-invite?token=${token}">Set up your driver account</a></p>
+       <p style="color:#888; font-size: 12px;">This link expires in 72 hours. If you weren't expecting this, you can ignore this email.</p>`,
+      "driver invite"
+    );
+  } catch (err) {
+    console.error(`[notifications] notifyDriverInvite failed for ${email}:`, err);
+  }
+}
+
+export async function notifyDriverAssociationRequest(
+  driver: { email: string; name: string },
+  restaurantName: string,
+  associationId: string
+): Promise<void> {
+  try {
+    await safeSend(
+      driver.email,
+      `${restaurantName} wants to add you as a driver`,
+      `<p>Hi ${driver.name},</p>
+       <p>${restaurantName} would like to add you to their delivery driver roster on Pre-Meal.</p>
+       <p><a href="${APP_URL}/driver/dashboard">Review this request</a></p>
+       <p style="color:#888; font-size: 12px;">Reference: ${associationId}</p>`,
+      "driver association request"
+    );
+  } catch (err) {
+    console.error(`[notifications] notifyDriverAssociationRequest failed for ${driver.email}:`, err);
+  }
+}

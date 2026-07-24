@@ -31,7 +31,9 @@ export default function LoginPage() {
         ? "/restaurant/dashboard"
         : data.user.role === "ADMIN"
           ? "/admin"
-          : "/"
+          : data.user.role === "DRIVER"
+            ? "/driver/dashboard"
+            : "/"
     );
     router.refresh();
   }

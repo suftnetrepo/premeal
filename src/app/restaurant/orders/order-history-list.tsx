@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Mail, MapPin, StickyNote, Printer, Download, ChefHat } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, Mail, MapPin, StickyNote, Printer, Download, ChefHat, Truck } from "lucide-react";
 import { formatMoney, formatDate } from "@/lib/format";
 
 type OrderItemModifier = { id: string; groupName: string; optionName: string; priceDeltaCents: number };
@@ -33,6 +34,7 @@ type Order = {
   customer: { name: string; email: string };
   slot: { date: Date; windowStart: string; windowEnd: string };
   items: OrderItem[];
+  driver: { id: string; name: string } | null;
 };
 
 const statusStyles: Record<string, string> = {
@@ -170,12 +172,31 @@ export function OrderHistoryList({
   orders,
   summaryOrders,
   restaurantName,
+  activeDrivers,
 }: {
   orders: Order[];
   summaryOrders: Order[];
   restaurantName: string;
+  activeDrivers: { id: string; name: string }[];
 }) {
   const [selected, setSelected] = useState<Order | null>(null);
+  const router = useRouter();
+  const [assigning, setAssigning] = useState(false);
+
+  async function handleAssignDriver(orderId: string, driverId: string | null) {
+    setAssigning(true);
+    const res = await fetch(`/api/restaurant/orders/${orderId}/assign-driver`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driverId }),
+    });
+    if (res.ok) {
+      const newDriver = driverId ? activeDrivers.find((d) => d.id === driverId) ?? null : null;
+      setSelected((prev) => (prev && prev.id === orderId ? { ...prev, driver: newDriver } : prev));
+      router.refresh();
+    }
+    setAssigning(false);
+  }
   // Deliberately computed from summaryOrders (the entire filtered set),
   // not the paginated `orders` currently rendered as cards — see
   // SUMMARY_SAFETY_CAP in page.tsx for why these are two different
@@ -342,6 +363,31 @@ export function OrderHistoryList({
                   )}
                 </div>
               )}
+
+              <div>
+                <p className="text-xs font-semibold text-stone-400 tracking-wide mb-2 flex items-center gap-1.5">
+                  <Truck size={13} strokeWidth={1.75} />
+                  DRIVER
+                </p>
+                <select
+                  value={selected.driver?.id ?? ""}
+                  disabled={assigning}
+                  onChange={(e) => handleAssignDriver(selected.id, e.target.value || null)}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">Unassigned</option>
+                  {activeDrivers.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                {activeDrivers.length === 0 && (
+                  <p className="text-xs text-stone-400 mt-1">
+                    No active drivers yet — invite one from the Drivers page.
+                  </p>
+                )}
+              </div>
 
               <div>
                 <p className="text-xs font-semibold text-stone-400 tracking-wide mb-2">ITEMS</p>

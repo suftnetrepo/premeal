@@ -139,26 +139,31 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </div>
             </div>
 
-            <div className="relative flex items-center justify-center min-h-[360px] rounded-3xl overflow-hidden">
-              {/* TEMP — replace with a real licensed food/restaurant photo
-                  before launch. Lorem Picsum, seeded for a stable image
-                  across reloads rather than a random one every render. */}
-              <Image
-                src="/hero.jpg"
-                alt=""
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-                priority
-              />
-              {/* Fades the image's left edge into the section's cream
-                  background instead of a hard rectangular seam against the
-                  text column. Constrained to a narrow strip (not the full
-                  width) so it doesn't wash out the whole photo. */}
-              <div className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-orange-50 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-black/0 to-black/0" />
+            <div className="relative flex items-center justify-center min-h-[360px] rounded-3xl overflow-hidden bg-orange-600">
+              {/* No stock photography here on purpose — Lorem Picsum was
+                  tried as a temporary placeholder, but it returns an
+                  arbitrary random photo with no thematic control, and it
+                  landed on something that isn't even food. A deliberate
+                  gradient reads as "designed" rather than "unfinished
+                  placeholder," which is the better failure mode until
+                  there's real licensed food/restaurant photography to
+                  drop in here — see the section below for exactly what to
+                  do when that's ready. */}
+              <div className="absolute w-72 h-72 rounded-full bg-orange-400/40 blur-3xl -top-10 -right-10" />
+              <div className="absolute w-64 h-64 rounded-full bg-amber-300/30 blur-3xl bottom-0 left-0" />
 
-          
+              <div className="relative bg-white/90 backdrop-blur rounded-2xl shadow-xl p-6 w-72 -rotate-3 border border-white">
+                <p className="text-[10px] font-semibold tracking-widest text-stone-400 mb-2">
+                  YOUR DELIVERY SLOT
+                </p>
+                <p className="text-xl font-bold text-stone-900 leading-tight">Fri 18:00–19:00</p>
+                <p className="text-sm text-stone-500 mt-0.5">Sakura Sushi</p>
+                <div className="border-t border-dashed border-stone-200 my-4" />
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={18} className="text-green-600" strokeWidth={2} />
+                  <p className="text-sm font-medium text-green-700">Confirmed in 12 min</p>
+                </div>
+              </div>
             </div>
           </div>
 

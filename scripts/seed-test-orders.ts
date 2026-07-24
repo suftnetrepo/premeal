@@ -22,7 +22,7 @@ import { DELIVERY_FEE_CENTS } from "../src/lib/capacity";
 import type { OrderStatus } from "@prisma/client";
 
 const ORDERS_PER_RESTAURANT = Number(process.argv[2]) || 40;
-const TEST_ADDRESS = "5 Iron Gate, Peterborough, PE2 5sp, UK";
+const TEST_ADDRESS = "5 Iron Gate, Derby, DE1 3GL";
 
 // Same local-timezone midnight convention as dateAtMidnight() in
 // src/app/api/restaurant/slots/route.ts — has to match, or these test
@@ -154,7 +154,6 @@ async function main() {
 
         subtotalCents += priceCents * quantity;
         return {
-          menuItemId: item.id,
           nameSnapshot: item.name,
           priceCents: item.priceCents, // base price, matching how real orders store it (modifiers separate)
           quantity,

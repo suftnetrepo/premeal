@@ -15,6 +15,7 @@ datasource db {
 enum UserRole {
   CUSTOMER
   RESTAURANT_OWNER
+  DRIVER
   ADMIN
 }
 
@@ -22,6 +23,18 @@ enum RestaurantApprovalStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// A driver can work for more than one restaurant (many-to-many, via this
+// model), and a restaurant only ever sees/assigns from drivers that have
+// actually accepted an association with THEM specifically — never a
+// driver's other restaurants. See RestaurantDriver below for the full
+// lifecycle this status represents.
+enum DriverAssociationStatus {
+  PENDING  // invited, not yet accepted — cannot be assigned deliveries
+  ACTIVE   // accepted — can be assigned deliveries by this restaurant
+  DECLINED // driver explicitly declined this restaurant's invite
+  REMOVED  // restaurant removed them, or the driver was reassigned away
 }
 
 enum OrderStatus {
@@ -73,11 +86,16 @@ model User {
   sessionVersion Int @default(0)
 
   restaurants  Restaurant[] // if role = RESTAURANT_OWNER
-  orders       Order[]
+  orders       Order[]      @relation("OrderCustomer")
   addresses    Address[]
   reviews      Review[]
   promoRedemptions PromoRedemption[]
   subscription     Subscription?
+
+  // Driver-specific — meaningless for any other role, same convention as
+  // `restaurants` above only being meaningful for RESTAURANT_OWNER.
+  driverAssociations RestaurantDriver[] // every restaurant this driver has ever been invited by/works for
+  driverOrders       Order[]            @relation("OrderDriver") // deliveries assigned to them, across every restaurant
 }
 
 // Saved delivery addresses. Free-text (same pattern as everywhere else
@@ -159,6 +177,41 @@ model Restaurant {
   reviews        Review[]
   orders         Order[]
   promoCodes     PromoCode[]
+  drivers        RestaurantDriver[] // this restaurant's own driver roster — see RestaurantDriver below
+}
+
+// The many-to-many link between a restaurant and a driver, plus the
+// invite lifecycle itself. Two distinct paths both create a row here:
+//
+// 1. Inviting an email with no existing DRIVER account: driverId starts
+//    null, an invite token is issued (same hashed-token pattern as email
+//    verification/password reset — see src/lib/tokens.ts), and the
+//    driver accepts by signing up through that link, which creates their
+//    account, sets driverId, and flips status straight to ACTIVE in one
+//    step — signing up via the invite IS the acceptance.
+// 2. Inviting an email that already has a DRIVER account: driverId is
+//    set immediately, but status stays PENDING until the driver
+//    explicitly accepts or declines from their own dashboard — a
+//    restaurant can never silently claim an existing driver just by
+//    knowing their email.
+model RestaurantDriver {
+  id           String                  @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant              @relation(fields: [restaurantId], references: [id])
+  driverId     String?
+  driver       User?                   @relation(fields: [driverId], references: [id])
+  email        String // kept even after driverId is set, for display/audit — the invite target of record
+  status       DriverAssociationStatus @default(PENDING)
+
+  inviteTokenHash      String?   @unique
+  inviteTokenExpiresAt DateTime?
+
+  invitedAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  // One invite per email per restaurant — re-inviting the same email
+  // updates the existing row rather than creating a duplicate.
+  @@unique([restaurantId, email])
 }
 
 // Restaurant-defined menu sections (e.g. "Main Meals", "Extra/Sides",
@@ -238,11 +291,20 @@ model DeliverySlot {
 model Order {
   id                   String       @id @default(cuid())
   customerId           String
-  customer             User         @relation(fields: [customerId], references: [id])
+  customer             User         @relation("OrderCustomer", fields: [customerId], references: [id])
   restaurantId         String
   restaurant           Restaurant   @relation(fields: [restaurantId], references: [id])
   slotId               String
   slot                 DeliverySlot @relation(fields: [slotId], references: [id])
+
+  // Who's actually delivering this order — set by the restaurant owner
+  // via /restaurant/drivers, only ever from that restaurant's own
+  // ACTIVE roster (see RestaurantDriver below). Null until assigned; an
+  // order can go through its whole lifecycle without a driver ever being
+  // assigned if the owner is delivering it personally, same as before
+  // this feature existed.
+  driverId             String?
+  driver               User?        @relation("OrderDriver", fields: [driverId], references: [id])
 
   status               OrderStatus  @default(PENDING_CONFIRMATION)
 

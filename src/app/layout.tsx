@@ -5,6 +5,7 @@ import { Nav } from "./components/nav";
 import { Footer } from "./components/footer";
 import { RestaurantShell } from "./components/restaurant-shell";
 import { AdminShell } from "./components/admin-shell";
+import { DriverShell } from "./components/driver-shell";
 import { EmailVerificationBanner } from "./components/email-verification-banner";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -40,6 +41,8 @@ export default async function RootLayout({
           <RestaurantShell user={user}>{children}</RestaurantShell>
         ) : user?.role === "ADMIN" ? (
           <AdminShell user={user}>{children}</AdminShell>
+        ) : user?.role === "DRIVER" ? (
+          <DriverShell user={user}>{children}</DriverShell>
         ) : (
           <>
             <Nav />

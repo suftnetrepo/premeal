@@ -89,6 +89,7 @@ export default async function RestaurantOrderHistoryPage({
     items: { include: { modifiers: true } },
     customer: true,
     slot: true,
+    driver: { select: { id: true, name: true } },
   };
 
   // Real delivery dates that actually have orders, not a decorative
@@ -111,6 +112,11 @@ export default async function RestaurantOrderHistoryPage({
   // filtered set up to a safety cap (feeding prep summary + CSV export —
   // see SUMMARY_SAFETY_CAP above for why this is deliberately separate
   // from the paginated query rather than reusing its result).
+  const activeDrivers = await prisma.restaurantDriver.findMany({
+    where: { restaurantId: restaurant.id, status: "ACTIVE" },
+    select: { driver: { select: { id: true, name: true } } },
+  });
+
   const [totalCount, orders, summaryOrders] = await Promise.all([
     prisma.order.count({ where }),
     prisma.order.findMany({
@@ -212,7 +218,12 @@ export default async function RestaurantOrderHistoryPage({
         </div>
       )}
 
-      <OrderHistoryList orders={orders} summaryOrders={summaryOrders} restaurantName={restaurant.name} />
+      <OrderHistoryList
+        orders={orders}
+        summaryOrders={summaryOrders}
+        restaurantName={restaurant.name}
+        activeDrivers={activeDrivers.map((d) => d.driver).filter((d): d is { id: string; name: string } => d !== null)}
+      />
 
       <Pagination currentPage={currentPage} totalPages={totalPages} buildHref={buildPageHref} />
     </main>
