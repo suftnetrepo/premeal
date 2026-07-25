@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
 import { isFeatureEnabled, FEATURE_FLAGS } from "@/lib/feature-flags";
 import { prisma } from "@/lib/db";
@@ -19,7 +20,7 @@ export async function Nav() {
     <NavShell>
       <div className="mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
         <Link href="/" className="font-bold text-stone-900 flex items-center gap-1.5">
-          <span className="text-orange-600">🍽️</span> Pre-Meal
+          <Image src="/logo.svg" alt="" width={22} height={22} /> Pre-Meal
         </Link>
 
         {user ? (

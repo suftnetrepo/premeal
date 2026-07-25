@@ -1,0 +1,11 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pre-Meal logo">
+  <rect width="100" height="100" rx="22" fill="#EA580C" />
+  <circle cx="50" cy="50" r="32" fill="#FFF7ED" />
+  <circle cx="50" cy="50" r="32" fill="none" stroke="#FDBA74" stroke-width="3" />
+  <!-- Clock hands, drawn directly on the "plate" — the same circle reads
+       as both at once, which is the whole point: schedule ahead, eat on
+       time, in one mark instead of two competing icons. -->
+  <line x1="50" y1="50" x2="50" y2="28" stroke="#EA580C" stroke-width="5" stroke-linecap="round" />
+  <line x1="50" y1="50" x2="65" y2="60" stroke="#EA580C" stroke-width="5" stroke-linecap="round" />
+  <circle cx="50" cy="50" r="4.5" fill="#EA580C" />
+</svg>

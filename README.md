@@ -59,6 +59,8 @@ npm run worker
 |---|---|---|
 | `owner@sakurasushi.test` | `password123` | Restaurant owner (Sakura Sushi) |
 | `owner@luigiskitchen.test` | `password123` | Restaurant owner (Luigi's Kitchen) |
+| `owner@mamakayas.test` | `password123` | Restaurant owner (Mama Kaya's Kitchen) |
+| `owner@delhispicehouse.test` | `password123` | Restaurant owner (Delhi Spice House) |
 | `customer@premeal.test` | `password123` | Customer |
 
 Restaurant owners land on `/restaurant/dashboard` after logging in — no more
@@ -681,6 +683,262 @@ since both would have been wrong foundations to build screens on top of:
   `src/lib/restaurant-listing.ts` — one function, used by both the
   homepage and the API route now, so this can't drift apart again the way
   it just did.
+
+## Menu templates now create real categories, not one "All items" bucket
+
+Every template item now carries a `category` (Mains/Sides/Desserts/Drinks),
+and applying a template creates those as real `MenuCategory` rows —
+upserted, not blindly created, since re-applying a template (or applying
+a second one) shouldn't produce two separate "Mains" categories for the
+same restaurant; `MenuCategory` already has a real
+`@@unique([restaurantId, name])` constraint for exactly this case.
+
+## Homepage cuisine chips only showed two — not a bug, but fixed anyway
+
+"Find your favourite" computes its chips from real restaurants' actual
+`cuisine` field (`src/app/page.tsx`) — never a hardcoded list, same "real
+data only" principle used everywhere else in this app (the date filter,
+the driver roster, the prep summary). With only Sakura Sushi (Japanese)
+and Luigi's Kitchen (Italian) seeded, two chips was the *correct*
+behavior, not broken. The actual fix isn't a UI change — it's more real
+restaurants. `prisma/seed.ts` now seeds two more, fully approved and
+ready to order from like the existing two: **Mama Kaya's Kitchen** (West
+African) and **Delhi Spice House** (Indian) — real menu items, real
+delivery slots, real demo owner logins (added to the table above). Once
+re-seeded, the homepage should show four chips, not two.
+
+## Real safety bug found in menu templates — items went live unreviewed
+
+The "quick start — pick a template" feature on `/restaurant/menu` was
+already substantially built — 7 cuisines (Japanese, Italian, Indian,
+West African, East African, Healthy, Burgers), already matching what
+was asked for directly. But `POST /api/restaurant/menu/apply-template`
+had a real, serious gap: it never explicitly set `isAvailable` on the
+created items, and `MenuItem.isAvailable` defaults to `true` at the
+schema level. That meant clicking a template put those items
+**immediately live on the real customer-facing menu** — a suggested
+price, no photo, completely unreviewed — the exact opposite of "just a
+starting point." Fixed by explicitly setting `isAvailable: false` on
+every template-created item. The existing UI already has the right
+treatment for this state (greyed out, strikethrough, a "Show" button),
+so once created correctly, a template item now clearly signals "review
+me before I can go live" instead of silently already being live.
+
+**Worth doing as a follow-up, not urgent**: template items currently
+have no category assigned, so they all land in one undifferentiated
+"All items" bucket rather than organized into Mains/Sides/Desserts —
+an organizational nice-to-have, not a safety issue like the one above.
+
+## Real hero photo, replacing the gradient placeholder
+
+The gradient treatment in the hero was always explicitly temporary —
+its own comment said so — waiting specifically for real photography
+instead of another random/stock substitute. `public/hero.jpg` is now a
+real photo, dropped straight into that same spot. Kept the same
+left-edge fade technique used before the placeholder detour even
+started (`bg-gradient-to-r from-orange-50 to-transparent` over the
+photo's left quarter) — without it, the photo would meet the text
+column in a hard rectangular seam; with it, the photo visually
+dissolves into the page's cream background instead of looking like a
+box dropped on top of it. Also kept the floating "delivery slot" card —
+that's real feature communication (matches the "confirmed within 30
+minutes" messaging used throughout this page), not decorative filler,
+so it stayed even though the gradient blobs around it didn't.
+
+## Seed script: a chain of latent bugs, not just one
+
+`npm run seed` had always worked fine — until the app had actually been
+used enough to generate a real review, at which point it broke with a
+foreign-key error. The real cause was bigger than that one error: the
+cleanup step only ever deleted `orderItem` and `order`, but `Review`,
+`PromoRedemption`, `PromoCode`, `RestaurantDriver`, and `Subscription`
+all have `RESTRICT` foreign keys too (Prisma's default when `onDelete`
+isn't specified) — every one of them would have blocked deletion in turn
+the moment any real data of that kind existed, not just the first one
+that happened to error. Checked every `@relation` in the schema
+systematically rather than patching the single reported error and
+risking the next person hitting the next one on retry. Deletion order
+now respects every dependency: each table goes before whatever it
+references (`Review`/`PromoRedemption` before `Order`, `Order` before
+`Restaurant`/`DeliverySlot`, `RestaurantDriver`/`Subscription` before
+`Restaurant`/`User`, etc.) — see the comments in `prisma/seed.ts` for the
+full reasoning per table.
+
+## Real logo, replacing the 🍽️ emoji placeholder
+
+`public/logo.svg` — a plate and a clock face merged into one mark (both
+are circles, so the same shape reads as either at once), matching
+"schedule ahead, eat on time" without needing two competing icons.
+Orange-600 (`#EA580C`) background to match the brand color used
+throughout, cream fill matching the hero's background tone.
+
+Replaced in all five places the emoji was standing in as the actual
+brand mark (`nav.tsx`, `footer.tsx`, and the restaurant/admin/driver
+shells) — **not** touched in the four other places `🍽️` appears
+(`restaurants/[id]/page.tsx`, `order-form.tsx`, `restaurant/menu/page.tsx`),
+since those are "no photo uploaded yet" placeholders for a restaurant or
+menu item image, a completely different purpose that would be actively
+confusing to show the brand logo in place of.
+
+## Per-restaurant delivery fee (replacing the old flat platform-wide £3)
+
+`DELIVERY_FEE_CENTS` was always a single constant, identical for every
+restaurant — flagged in its own original comment as an MVP
+simplification meant to be revisited. Now each restaurant sets their own
+delivery fee on the settings page (`/restaurant/location`), right next
+to delivery radius — same pattern, same page, same "you deliver
+yourself, you set the number" philosophy.
+
+**Went with a simple flat fee, not distance-based**, after weighing both:
+distance-based pricing can't show a trustworthy number on a restaurant
+card before a customer has even entered an address (it'd have to be a
+"from £X" estimate everywhere instead of a real price), and it's the
+owner's own delivery cost to judge, not a formula for the platform to
+impose.
+
+**Migrating existing restaurants doesn't silently change what they
+charge**: `Restaurant.deliveryFeeCents` defaults to `300` (£3) at the
+schema level — the exact previous flat fee — so nothing changes for any
+restaurant until its owner actively sets a different number.
+`DELIVERY_FEE_CENTS` is renamed to `DEFAULT_DELIVERY_FEE_CENTS` in
+`src/lib/capacity.ts` — it's now just the starting value new restaurants
+get and what the settings page pre-fills, not the amount actually
+charged, which now always comes from the specific restaurant's own
+field. Checked every place the old constant was used (checkout math in
+`createOrder()`, both customer-facing display spots, and the test-order
+seed script) — none were missed, confirmed with a final repo-wide grep
+before calling this done.
+
+**Migration needed, same process as the last two**:
+```
+mkdir prisma/migrations/00000000000003_restaurant_delivery_fee
+git show HEAD:prisma/schema.prisma > /tmp/old-schema.prisma
+npx prisma migrate diff --from-schema-datamodel /tmp/old-schema.prisma --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/00000000000003_restaurant_delivery_fee/migration.sql
+```
+Review the generated SQL, then `npx prisma migrate deploy` both locally
+and against Render, then `npx prisma generate` — and this time,
+**fully restart the dev server afterward**, not just regenerate the
+client, since that exact gap (stale client in a still-running process)
+caused real confusion last time this pattern came up.
+
+## Real bug: card started "failing" after any order-creation failure
+
+Reported as "the delivery address was outside the radius, and then the
+card started failing too" — looked at first like it might just be the
+"Onelink" browser-extension issue flagged earlier in this build, but
+it wasn't (or wasn't only that). Real, reproducible bug in
+`checkout-payment.tsx`: `CheckoutPayment` fetched exactly **one** Stripe
+SetupIntent for the whole checkout session (guarded so React StrictMode
+can't accidentally create two). The first "Pay" click correctly
+confirms that SetupIntent — Stripe marks it `succeeded`, a terminal
+state. If the order then fails server-side for *any* reason (wrong
+delivery address, a slot that filled up, a promo code race) and the
+button resets so the customer can retry — which is exactly what the
+earlier "stuck Verifying card" fix was supposed to enable — retrying
+called `stripe.confirmSetup()` again against that same already-succeeded
+SetupIntent. That's not a supported flow, and Stripe's Payment Element
+reacted by flagging the saved card as failed — which is exactly the
+symptom reported.
+
+**Fix**: a failed order now fetches a genuinely fresh SetupIntent before
+allowing a retry, instead of reusing the consumed one.
+`fetchClientSecret` in `CheckoutPayment` is reusable now, not a
+mount-only effect, and `PayButton` calls it when `onPaymentMethod`
+reports the order failed. Setting `clientSecret` to `null` during the
+refetch is deliberate, not just a loading flag — the component has an
+early return for `!clientSecret` that unmounts `<Elements>` entirely
+while a new intent is being fetched, which is what actually gives
+`PaymentElement` a clean slate instead of holding onto state tied to the
+old, used-up intent. **The honest cost of this fix**: after a failed
+order, the customer does need to re-enter their card details — that's
+correct behavior, not a regression, since the previous entry was tied to
+a SetupIntent that's genuinely spent and can't be reused, not a bug to
+work around.
+
+## Restaurant settings rework — contact info, shown to customers at checkout
+
+`/restaurant/location` (same URL, sidebar label now "Settings") expanded
+beyond just photo/address/radius to include a description, contact
+phone, and contact email — shown to customers in a new "About this
+restaurant" card in the order page's sidebar, right next to checkout,
+not buried in the hero banner above where it's easy to scroll past. Only
+renders if the restaurant has actually filled in at least one field, not
+an empty card by default.
+
+**A real gap this closes, not just a new feature**: `Restaurant.description`
+already existed in the schema, but had no edit UI anywhere — every
+restaurant's description was `null`, so a `{restaurant.description && ...}`
+check elsewhere in the app never actually rendered anything for a real
+restaurant. It's editable now, and the old duplicate render location (a
+one-line description under the hero title) was removed in favor of the
+richer sidebar card, so it doesn't show twice.
+
+**New fields, deliberately separate from the owner's login email**: a
+restaurant might reasonably want a different phone/email for customer
+contact than whatever the owner personally logs in with — `phone` and
+`contactEmail` are their own fields, not reused from `User`.
+
+**Migration needed, same process as before**: this sandbox is still
+blocked from Prisma's binary host, so generate it yourself the same safe
+way used for the drivers migration:
+```
+mkdir prisma/migrations/00000000000002_restaurant_contact_info
+git show HEAD:prisma/schema.prisma > /tmp/old-schema.prisma
+npx prisma migrate diff --from-schema-datamodel /tmp/old-schema.prisma --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/00000000000002_restaurant_contact_info/migration.sql
+```
+Then apply locally and to Render as usual with `prisma migrate deploy`.
+
+**Delivery pricing, a question raised alongside this**: still a flat
+platform-wide £3 (`DELIVERY_FEE_CENTS` in `src/lib/capacity.ts`), not
+something each restaurant sets themselves — that constant's own comment
+has flagged it as an MVP simplification since it was first written.
+Making it per-restaurant is a real, separate feature (touches checkout
+math directly) — deliberately not bundled into this settings rework
+without an explicit decision to do so.
+
+## UI polish: hidden scrollbars, restyled driver dropdown
+
+- **Horizontal scroll rows** (status/date filter pills, homepage cuisine
+  chips, the mobile bottom nav bar) were showing the browser's default
+  scrollbar track — functional, but visually heavy against the rest of
+  this app's design. Added a reusable `.no-scrollbar` utility in
+  `globals.css` (hides the scrollbar cross-browser while keeping the row
+  fully scrollable — nothing about the actual scroll behavior changes)
+  and applied it consistently across all 7 places this pattern shows up
+  in the app, not just the one screenshot flagged it on.
+- **The driver assignment dropdown** was a bare, unstyled native
+  `<select>`. Native selects can't easily have an icon placed inside
+  them the way a text input can, so this uses the standard workaround:
+  `appearance-none` removes the browser's own arrow (which renders
+  inconsistently across browsers anyway), replaced with a Lucide
+  `ChevronDown` positioned on top — same icon set as the rest of the
+  app, plus a focus ring matching the orange accent used elsewhere on
+  interactive inputs.
+
+## Two bugs found via live printing, fixed the same day
+
+- **The driver dropdown was printing as part of the receipt.** It had
+  been placed inside `#print-receipt` (see the CSS-based print isolation
+  described under "Print receipt & CSV export" above), which meant an
+  interactive `<select>` control — meaningless once it's on paper — was
+  showing up on the printed page. Moved it out of the printable boundary
+  entirely, into the drawer's sticky header instead. That's arguably a
+  UX improvement on its own, not just a print fix: an operational
+  control like "who's delivering this" is more useful always-visible at
+  the top than buried mid-scroll in receipt content.
+- **Item and price columns weren't aligning in the printed output**,
+  despite looking correctly aligned on screen. Root cause: Safari has a
+  long-documented bug where `flexbox`'s `justify-content` doesn't
+  reliably hold up in its print engine, even though the exact same
+  layout renders correctly on screen — a real, known browser quirk, not
+  a mistake in the original flex-based layout. Fixed with Tailwind's
+  `print:` variant: every row that needs reliable two-column alignment
+  (each item line, and the subtotal/delivery/discount/total rows) now
+  switches to `display: table` specifically under print
+  (`print:table`/`print:table-cell`/`print:text-right`) while keeping
+  the original flexbox layout completely unchanged on screen. Table
+  display is the standard, robust workaround for exactly this class of
+  print bug.
 
 ## Drivers — restaurants can now delegate delivery to their own staff
 

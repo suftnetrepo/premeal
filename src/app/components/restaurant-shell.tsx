@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { RestaurantSidebarNav } from "./restaurant-sidebar-nav";
 import { EmailVerificationBanner } from "./email-verification-banner";
@@ -22,7 +23,7 @@ export async function RestaurantShell({ user, children }: { user: User; children
         <header className="border-b border-stone-200 bg-white">
           <div className="px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link href="/restaurant/dashboard" className="font-bold text-stone-900 flex items-center gap-1.5">
-              <span className="text-orange-600">🍽️</span> Pre-Meal
+              <Image src="/logo.svg" alt="" width={22} height={22} /> Pre-Meal
             </Link>
             <div className="flex items-center gap-3">
               {restaurant && (

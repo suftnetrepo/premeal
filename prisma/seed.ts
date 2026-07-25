@@ -22,11 +22,23 @@ function cutoffFor(date: Date, hour: number): Date {
 async function main() {
   console.log("Seeding...");
 
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.deliverySlot.deleteMany();
-  await prisma.menuItem.deleteMany();
-  await prisma.restaurant.deleteMany();
+  // Deletion order matters — every one of these has a RESTRICT foreign
+  // key (Prisma's default when onDelete isn't specified), so each table
+  // has to go before whatever it references, or Postgres blocks the
+  // delete. This used to only handle orderItem/order and broke the
+  // moment any real Review, PromoRedemption, PromoCode, RestaurantDriver,
+  // or Subscription existed — which never happened on a first-ever seed
+  // run, only once the app had actually been used for real.
+  await prisma.review.deleteMany(); // references Order, User, Restaurant
+  await prisma.promoRedemption.deleteMany(); // references PromoCode, User, Order
+  await prisma.orderItem.deleteMany(); // references Order, MenuItem
+  await prisma.order.deleteMany(); // references Restaurant, DeliverySlot, User, PromoCode
+  await prisma.deliverySlot.deleteMany(); // references Restaurant
+  await prisma.promoCode.deleteMany(); // references Restaurant
+  await prisma.menuItem.deleteMany(); // references Restaurant
+  await prisma.restaurantDriver.deleteMany(); // references Restaurant, User
+  await prisma.subscription.deleteMany(); // references User
+  await prisma.restaurant.deleteMany(); // references User (owner)
   await prisma.user.deleteMany();
 
   const demoPasswordHash = await hashPassword(DEMO_PASSWORD);
@@ -47,6 +59,29 @@ async function main() {
       role: "RESTAURANT_OWNER",
       passwordHash: demoPasswordHash,
       emailVerifiedAt: new Date(), // pre-verified for convenience — this is demo/seed data
+    },
+  });
+  // Two more, deliberately different cuisines — the homepage's cuisine
+  // filter chips are computed from real restaurants' actual cuisine
+  // field (see src/app/page.tsx), not a hardcoded list, so with only
+  // Japanese and Italian seeded, "Find your favourite" only ever showed
+  // two chips. This is what actually fixes that, not a UI change.
+  const kayaOwner = await prisma.user.create({
+    data: {
+      email: "owner@mamakayas.test",
+      name: "Kaya",
+      role: "RESTAURANT_OWNER",
+      passwordHash: demoPasswordHash,
+      emailVerifiedAt: new Date(),
+    },
+  });
+  const delhiOwner = await prisma.user.create({
+    data: {
+      email: "owner@delhispicehouse.test",
+      name: "Anjali",
+      role: "RESTAURANT_OWNER",
+      passwordHash: demoPasswordHash,
+      emailVerifiedAt: new Date(),
     },
   });
   const demoCustomer = await prisma.user.create({
@@ -195,6 +230,80 @@ async function main() {
     },
   });
 
+  const kaya = await prisma.restaurant.create({
+    data: {
+      ownerId: kayaOwner.id,
+      name: "Mama Kaya's Kitchen",
+      slug: "mama-kayas-kitchen",
+      cuisine: "West African",
+      description: "Home-style Nigerian and Ghanaian cooking, made fresh for your chosen day.",
+      minOrderCents: 1200,
+      address: "8 Sadler Gate, Derby, DE1 3NR",
+      latitude: 52.9235,
+      longitude: -1.4755,
+      deliveryRadiusKm: 6,
+      approvalStatus: "APPROVED",
+      signupFeeCents: 5000,
+      signupFeePaidAt: new Date(),
+      menuItems: {
+        create: [
+          { name: "Jollof rice with grilled chicken", priceCents: 1350, description: "Jollof rice served with a grilled chicken thigh." },
+          { name: "Egusi soup", priceCents: 1250, description: "Ground melon seed stew with leafy greens, served with pounded yam." },
+          { name: "Suya", priceCents: 950, description: "Grilled spiced beef skewers, suya pepper spice mix." },
+          { name: "Plantain (fried)", priceCents: 400 },
+          { name: "Puff puff", priceCents: 450, description: "Lightly sweet fried dough balls." },
+        ],
+      },
+    },
+  });
+
+  const delhiSpice = await prisma.restaurant.create({
+    data: {
+      ownerId: delhiOwner.id,
+      name: "Delhi Spice House",
+      slug: "delhi-spice-house",
+      cuisine: "Indian",
+      description: "North Indian classics, slow-cooked and ready for scheduled delivery.",
+      minOrderCents: 1200,
+      address: "22 St Peter's Street, Derby, DE1 2AB",
+      latitude: 52.9210,
+      longitude: -1.4750,
+      deliveryRadiusKm: 7,
+      approvalStatus: "APPROVED",
+      signupFeeCents: 5000,
+      signupFeePaidAt: new Date(),
+      menuItems: {
+        create: [
+          {
+            name: "Chicken tikka masala",
+            priceCents: 1200,
+            description: "Grilled chicken in a spiced tomato-cream sauce.",
+            modifierGroups: {
+              create: [
+                {
+                  name: "Spice level",
+                  minSelect: 1,
+                  maxSelect: 1,
+                  options: {
+                    create: [
+                      { name: "Mild", priceDeltaCents: 0 },
+                      { name: "Medium", priceDeltaCents: 0 },
+                      { name: "Hot", priceDeltaCents: 0 },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          { name: "Lamb rogan josh", priceCents: 1350, description: "Slow-braised lamb, Kashmiri chilli, aromatic spices." },
+          { name: "Vegetable biryani", priceCents: 1100, description: "Basmati rice layered with spiced vegetables." },
+          { name: "Garlic naan", priceCents: 350 },
+          { name: "Mango lassi", priceCents: 400 },
+        ],
+      },
+    },
+  });
+
   // Next 7 days, one dinner window (18:00-19:00) per restaurant per day,
   // with capacity levels that mirror the mockups: today near-full for
   // Sakura, a mix of available/limited/full further out.
@@ -227,9 +336,33 @@ async function main() {
         cutoffAt: cutoffFor(date, 14),
       },
     });
+
+    await prisma.deliverySlot.create({
+      data: {
+        restaurantId: kaya.id,
+        date,
+        windowStart: "18:00",
+        windowEnd: "19:00",
+        capacity: 25,
+        bookedCount: dayOffset % 4,
+        cutoffAt: cutoffFor(date, 15),
+      },
+    });
+
+    await prisma.deliverySlot.create({
+      data: {
+        restaurantId: delhiSpice.id,
+        date,
+        windowStart: "18:30",
+        windowEnd: "19:30",
+        capacity: 25,
+        bookedCount: dayOffset % 5,
+        cutoffAt: cutoffFor(date, 15),
+      },
+    });
   }
 
-  console.log("Seeded:", { sakura: sakura.name, luigis: luigis.name });
+  console.log("Seeded:", { sakura: sakura.name, luigis: luigis.name, kaya: kaya.name, delhiSpice: delhiSpice.name });
 
   // Subscriptions start disabled — the plan is to introduce Pre-Meal+
   // once there's real repeat-order data to price it against, not at

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ShieldCheck, Clock3, Wallet } from "lucide-react";
 
 export function Footer() {
@@ -37,7 +38,9 @@ export function Footer() {
       <div className="border-t border-stone-200">
         <div className="mx-auto max-w-7xl px-4 py-10 flex flex-col sm:flex-row sm:items-start justify-between gap-8">
           <div>
-            <p className="font-semibold text-stone-900">🍽️ Pre-Meal</p>
+            <p className="font-semibold text-stone-900 flex items-center gap-1.5">
+              <Image src="/logo.svg" alt="" width={18} height={18} /> Pre-Meal
+            </p>
             <p className="text-sm text-stone-500 mt-1 max-w-xs">Order today, eat exactly when you planned to.</p>
           </div>
 

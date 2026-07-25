@@ -21,8 +21,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown template" }, { status: 404 });
   }
 
+  // isAvailable: false is deliberate, not optional — MenuItem.isAvailable
+  // defaults to true at the schema level, so without setting this
+  // explicitly, every template item would go straight onto the live
+  // customer-facing menu the moment it's created: a suggested price, no
+  // photo, completely unreviewed. This is what makes "just a starting
+  // point" actually true — the owner has to consciously review and
+  // toggle each item on before a real customer can ever see it.
   const items = await prisma.menuItem.createMany({
-    data: template.items.map((item) => ({ ...item, restaurantId: result.restaurant.id })),
+    data: template.items.map((item) => ({ ...item, restaurantId: result.restaurant.id, isAvailable: false })),
   });
 
   return NextResponse.json({ createdCount: items.count }, { status: 201 });
