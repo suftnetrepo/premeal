@@ -8,14 +8,41 @@ import { unexpectedErrorResponse } from "@/lib/api-errors";
 const schema = z.object({
   address: z.string().min(1),
   deliveryRadiusKm: z.number().positive().max(100),
+  // £0 is a legitimate choice (a restaurant offering free delivery
+  // themselves) — only the upper bound guards against a stray typo like
+  // an extra zero, not against undercutting.
+  deliveryFeeCents: z.number().int().min(0).max(2000),
+  description: z.string().max(500).nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
+  contactEmail: z.string().email().nullable().optional().or(z.literal("")),
 });
 
 export async function GET() {
   const result = await requireOwnedRestaurant();
   if (isFailure(result)) return result.error;
 
-  const { address, latitude, longitude, deliveryRadiusKm, imageUrl } = result.restaurant;
-  return NextResponse.json({ address, latitude, longitude, deliveryRadiusKm, imageUrl });
+  const {
+    address,
+    latitude,
+    longitude,
+    deliveryRadiusKm,
+    deliveryFeeCents,
+    imageUrl,
+    description,
+    phone,
+    contactEmail,
+  } = result.restaurant;
+  return NextResponse.json({
+    address,
+    latitude,
+    longitude,
+    deliveryRadiusKm,
+    deliveryFeeCents,
+    imageUrl,
+    description,
+    phone,
+    contactEmail,
+  });
 }
 
 export async function POST(request: Request) {
@@ -41,6 +68,10 @@ export async function POST(request: Request) {
         latitude: geocoded.latitude,
         longitude: geocoded.longitude,
         deliveryRadiusKm: parsed.data.deliveryRadiusKm,
+        deliveryFeeCents: parsed.data.deliveryFeeCents,
+        description: parsed.data.description || null,
+        phone: parsed.data.phone || null,
+        contactEmail: parsed.data.contactEmail || null,
       },
     });
 
@@ -49,11 +80,15 @@ export async function POST(request: Request) {
       latitude: restaurant.latitude,
       longitude: restaurant.longitude,
       deliveryRadiusKm: restaurant.deliveryRadiusKm,
+      deliveryFeeCents: restaurant.deliveryFeeCents,
+      description: restaurant.description,
+      phone: restaurant.phone,
+      contactEmail: restaurant.contactEmail,
     });
   } catch (err) {
     if (err instanceof GeocodingNotConfiguredError) {
       return NextResponse.json({ error: err.message }, { status: 503 });
     }
-    return unexpectedErrorResponse(err, "Could not save location");
+    return unexpectedErrorResponse(err, "Could not save settings");
   }
 }

@@ -4,7 +4,6 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatMoney, formatDate } from "@/lib/format";
-import { DELIVERY_FEE_CENTS } from "@/lib/capacity";
 import { OrderForm } from "./order-form";
 import { StarDisplay } from "@/app/components/stars";
 
@@ -97,15 +96,21 @@ export default async function RestaurantPage({
               or small-order fee, since neither exists in this app's
               pricing model. */}
           <p className="text-stone-500 text-sm mt-2">
-            {restaurant.cuisine} · Min {formatMoney(restaurant.minOrderCents)} · Delivery {formatMoney(DELIVERY_FEE_CENTS)}
+            {restaurant.cuisine} · Min {formatMoney(restaurant.minOrderCents)} · Delivery {formatMoney(restaurant.deliveryFeeCents)}
           </p>
-          {restaurant.description && (
-            <p className="text-stone-500 text-sm mt-1">{restaurant.description}</p>
-          )}
+          {/* The full description now lives in OrderForm's sidebar
+              instead of here — shown alongside phone/email so it reads
+              as one coherent "about this restaurant" section next to
+              checkout, rather than splitting it across two places on
+              the page. */}
         </div>
 
         <OrderForm
           restaurantId={restaurant.id}
+          restaurantName={restaurant.name}
+          description={restaurant.description}
+          phone={restaurant.phone}
+          contactEmail={restaurant.contactEmail}
           categories={restaurant.menuCategories.map((c) => ({ id: c.id, name: c.name }))}
           menuItems={restaurant.menuItems.map((m) => ({
             id: m.id,

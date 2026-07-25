@@ -18,7 +18,6 @@
  * Usage: npx tsx scripts/seed-test-orders.ts [count-per-restaurant]
  */
 import { prisma } from "../src/lib/db";
-import { DELIVERY_FEE_CENTS } from "../src/lib/capacity";
 import type { OrderStatus } from "@prisma/client";
 
 const ORDERS_PER_RESTAURANT = Number(process.argv[2]) || 40;
@@ -154,6 +153,7 @@ async function main() {
 
         subtotalCents += priceCents * quantity;
         return {
+          menuItemId: item.id,
           nameSnapshot: item.name,
           priceCents: item.priceCents, // base price, matching how real orders store it (modifiers separate)
           quantity,
@@ -161,7 +161,7 @@ async function main() {
         };
       });
 
-      const deliveryFeeCents = DELIVERY_FEE_CENTS;
+      const deliveryFeeCents = restaurant.deliveryFeeCents;
       const totalCents = subtotalCents + deliveryFeeCents;
       const createdAt = new Date(slot.date.getTime() - Math.floor(Math.random() * 4) * 24 * 60 * 60 * 1000);
 

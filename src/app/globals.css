@@ -46,3 +46,16 @@ body {
     width: 100%;
   }
 }
+
+/* Hides the scrollbar on horizontally-scrolling rows (filter pills,
+   cuisine chips, mobile bottom nav) while keeping them fully scrollable
+   — the browser's default scrollbar track looks heavy and unpolished
+   against this app's design, but the scroll behavior itself still needs
+   to work, so it's hidden visually rather than disabled. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* older Edge/IE */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}

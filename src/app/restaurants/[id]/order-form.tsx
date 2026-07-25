@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Minus, ShoppingBasket, CalendarDays, Clock, X } from "lucide-react";
+import { Search, Plus, Minus, ShoppingBasket, CalendarDays, Clock, X, Phone, Mail } from "lucide-react";
 import { formatMoney, formatDate } from "@/lib/format";
 import { CheckoutPayment } from "./checkout-payment";
 import { AddressPicker } from "./address-picker";
@@ -76,11 +76,19 @@ function isSelectionValid(item: MenuItem, selectedOptionIds: string[]): boolean 
 
 export function OrderForm({
   restaurantId,
+  restaurantName,
+  description,
+  phone,
+  contactEmail,
   categories,
   menuItems,
   slots,
 }: {
   restaurantId: string;
+  restaurantName: string;
+  description: string | null;
+  phone: string | null;
+  contactEmail: string | null;
   categories: Category[];
   menuItems: MenuItem[];
   slots: Slot[];
@@ -321,7 +329,7 @@ export function OrderForm({
         </div>
 
         {categories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             <button
               onClick={() => setActiveTab("all")}
               className={`shrink-0 text-sm font-medium px-4 py-2 rounded-full transition-colors ${
@@ -665,6 +673,38 @@ export function OrderForm({
             </>
           )}
         </div>
+
+        {/* About/contact — only rendered if the restaurant has actually
+            filled in at least one of these (see /restaurant/location),
+            rather than showing an empty card by default. Placed here,
+            next to checkout, so it's visible while someone's actually
+            deciding/ordering, not buried in the hero banner above where
+            it's easy to scroll past. */}
+        {(description || phone || contactEmail) && (
+          <div className="border border-stone-200 rounded-2xl bg-white p-5 mt-4">
+            <h2 className="font-bold text-stone-900 mb-2">About {restaurantName}</h2>
+            {description && <p className="text-sm text-stone-600 mb-3">{description}</p>}
+            {(phone || contactEmail) && (
+              <div className="flex flex-col gap-1.5 text-sm">
+                {phone && (
+                  <a href={`tel:${phone}`} className="flex items-center gap-2 text-stone-600 hover:text-orange-600">
+                    <Phone size={14} strokeWidth={1.75} />
+                    {phone}
+                  </a>
+                )}
+                {contactEmail && (
+                  <a
+                    href={`mailto:${contactEmail}`}
+                    className="flex items-center gap-2 text-stone-600 hover:text-orange-600"
+                  >
+                    <Mail size={14} strokeWidth={1.75} />
+                    {contactEmail}
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </aside>
     </div>
   );

@@ -129,6 +129,22 @@ model Restaurant {
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
 
+  // What this restaurant charges for delivery — set on the same
+  // settings page as delivery radius, same "you deliver yourself, you
+  // set the number" philosophy. Defaults to 300 (£3) to match this
+  // app's original flat platform-wide fee exactly, so migrating existing
+  // restaurants doesn't silently change what any of them charge — an
+  // owner has to actively change this for their own price to move.
+  deliveryFeeCents Int @default(300)
+
+  // Contact info shown to customers on the order page — set via
+  // /restaurant/location (the restaurant settings page), separate from
+  // the owner's own login email, since a restaurant might want a
+  // different phone/email for customer-facing contact than whatever the
+  // owner personally logs in with.
+  phone        String?
+  contactEmail String?
+
   // Set via /restaurant/location. All three are set together — see
   // src/app/api/restaurant/location/route.ts. A restaurant with no
   // latitude/longitude simply doesn't appear in address-filtered search

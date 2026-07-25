@@ -4,7 +4,6 @@ import { formatMoney } from "@/lib/format";
 import { kmToMiles } from "@/lib/geo";
 import { getListableRestaurants } from "@/lib/restaurant-listing";
 import { getPopularDishNames, getPlatformStats } from "@/lib/homepage-stats";
-import { DELIVERY_FEE_CENTS } from "@/lib/capacity";
 import { AddressSearch } from "./components/address-search";
 import { StarDisplay } from "./components/stars";
 import {
@@ -254,7 +253,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <p className="text-xl font-bold text-stone-900 mb-4">Find your favourite</p>
 
         {/* Category pills, not circles — real cuisines only */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-6">
           <Link
             href={buildQuery(params, { cuisine: undefined })}
             className={`shrink-0 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium border transition-colors ${
@@ -363,7 +362,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                       <p className="text-xs text-stone-400 mt-1">New</p>
                     )}
                     <p className="text-sm text-stone-500 mt-1.5">
-                      {r.cuisine} · {formatMoney(DELIVERY_FEE_CENTS)} delivery · {formatMoney(r.minOrderCents)} min
+                      {r.cuisine} · {formatMoney(r.deliveryFeeCents)} delivery · {formatMoney(r.minOrderCents)} min
                       {r.distanceKm !== null && ` · ${kmToMiles(r.distanceKm).toFixed(1)} mi`}
                     </p>
                     {popularDishes.length > 0 && (
@@ -427,7 +426,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </div>
             </div>
 
-            <div className="flex gap-4 justify-center overflow-x-auto py-2">
+            <div className="flex gap-4 justify-center overflow-x-auto no-scrollbar py-2">
               {[
                 { label: "Scheduling", content: "slot" },
                 { label: "Checkout", content: "checkout" },

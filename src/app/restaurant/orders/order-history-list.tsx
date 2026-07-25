@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Mail, MapPin, StickyNote, Printer, Download, ChefHat, Truck } from "lucide-react";
+import { X, Mail, MapPin, StickyNote, Printer, Download, ChefHat, Truck, ChevronDown } from "lucide-react";
 import { formatMoney, formatDate } from "@/lib/format";
 
 type OrderItemModifier = { id: string; groupName: string; optionName: string; priceDeltaCents: number };
@@ -314,6 +314,48 @@ export function OrderHistoryList({
               </div>
             </div>
 
+            {/* Driver assignment — deliberately outside #print-receipt below.
+                It's an operational control (who's delivering this), not
+                receipt content — a <select> dropdown doesn't mean anything
+                once it's on paper. Living in the header also means it's
+                visible immediately, not buried mid-scroll. */}
+            <div className="px-5 pt-4 pb-1 border-b border-stone-100">
+              <p className="text-xs font-semibold text-stone-400 tracking-wide mb-2 flex items-center gap-1.5">
+                <Truck size={13} strokeWidth={1.75} />
+                DRIVER
+              </p>
+              <div className="relative mb-3">
+                <select
+                  value={selected.driver?.id ?? ""}
+                  disabled={assigning}
+                  onChange={(e) => handleAssignDriver(selected.id, e.target.value || null)}
+                  className="w-full appearance-none border border-stone-200 rounded-xl pl-3 pr-9 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-300 disabled:opacity-60 disabled:cursor-not-allowed transition-shadow"
+                >
+                  <option value="">Unassigned</option>
+                  {activeDrivers.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                {/* appearance-none above removes the native browser arrow
+                    entirely (inconsistent styling across browsers) —
+                    this replaces it with one that actually matches the
+                    rest of the app's icon set. pointer-events-none so it
+                    doesn't intercept clicks meant for the select itself. */}
+                <ChevronDown
+                  size={16}
+                  strokeWidth={1.75}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
+                />
+              </div>
+              {activeDrivers.length === 0 && (
+                <p className="text-xs text-stone-400 -mt-2 mb-3">
+                  No active drivers yet — invite one from the Drivers page.
+                </p>
+              )}
+            </div>
+
             <div id="print-receipt" className="p-5 flex flex-col gap-5">
               {/* Restaurant name only needs to appear on the printed
                   version — on screen it's redundant, since you're
@@ -365,40 +407,26 @@ export function OrderHistoryList({
               )}
 
               <div>
-                <p className="text-xs font-semibold text-stone-400 tracking-wide mb-2 flex items-center gap-1.5">
-                  <Truck size={13} strokeWidth={1.75} />
-                  DRIVER
-                </p>
-                <select
-                  value={selected.driver?.id ?? ""}
-                  disabled={assigning}
-                  onChange={(e) => handleAssignDriver(selected.id, e.target.value || null)}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">Unassigned</option>
-                  {activeDrivers.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                {activeDrivers.length === 0 && (
-                  <p className="text-xs text-stone-400 mt-1">
-                    No active drivers yet — invite one from the Drivers page.
-                  </p>
-                )}
-              </div>
-
-              <div>
                 <p className="text-xs font-semibold text-stone-400 tracking-wide mb-2">ITEMS</p>
                 <div className="flex flex-col gap-3">
                   {selected.items.map((item) => (
                     <div key={item.id} className="text-sm">
-                      <div className="flex justify-between">
-                        <p className="font-medium text-stone-900">
+                      {/* print:table + print:table-cell is deliberate, not
+                          just flex — Safari (and other browsers to a
+                          lesser degree) has a long-documented bug where
+                          flexbox justify-content doesn't reliably hold up
+                          in the print engine, even though it renders
+                          correctly on screen. Table display is the
+                          standard, robust workaround for exactly this;
+                          screen rendering is untouched since these rules
+                          only apply under print. */}
+                      <div className="flex justify-between print:table print:w-full">
+                        <p className="font-medium text-stone-900 print:table-cell">
                           {item.quantity}× {item.nameSnapshot}
                         </p>
-                        <p className="text-stone-900">{formatMoney(item.priceCents * item.quantity)}</p>
+                        <p className="text-stone-900 print:table-cell print:text-right">
+                          {formatMoney(item.priceCents * item.quantity)}
+                        </p>
                       </div>
                       {item.modifiers.length > 0 && (
                         <p className="text-xs text-stone-400 mt-0.5">
@@ -411,23 +439,23 @@ export function OrderHistoryList({
               </div>
 
               <div className="border-t border-stone-100 pt-4 flex flex-col gap-1.5 text-sm">
-                <div className="flex justify-between text-stone-500">
-                  <p>Subtotal</p>
-                  <p>{formatMoney(selected.subtotalCents)}</p>
+                <div className="flex justify-between print:table print:w-full text-stone-500">
+                  <p className="print:table-cell">Subtotal</p>
+                  <p className="print:table-cell print:text-right">{formatMoney(selected.subtotalCents)}</p>
                 </div>
-                <div className="flex justify-between text-stone-500">
-                  <p>Delivery</p>
-                  <p>{formatMoney(selected.deliveryFeeCents)}</p>
+                <div className="flex justify-between print:table print:w-full text-stone-500">
+                  <p className="print:table-cell">Delivery</p>
+                  <p className="print:table-cell print:text-right">{formatMoney(selected.deliveryFeeCents)}</p>
                 </div>
                 {selected.discountCents > 0 && (
-                  <div className="flex justify-between text-green-700">
-                    <p>Discount</p>
-                    <p>-{formatMoney(selected.discountCents)}</p>
+                  <div className="flex justify-between print:table print:w-full text-green-700">
+                    <p className="print:table-cell">Discount</p>
+                    <p className="print:table-cell print:text-right">-{formatMoney(selected.discountCents)}</p>
                   </div>
                 )}
-                <div className="flex justify-between font-semibold text-stone-900 text-base pt-1">
-                  <p>Total</p>
-                  <p>{formatMoney(selected.totalCents)}</p>
+                <div className="flex justify-between print:table print:w-full font-semibold text-stone-900 text-base pt-1">
+                  <p className="print:table-cell">Total</p>
+                  <p className="print:table-cell print:text-right">{formatMoney(selected.totalCents)}</p>
                 </div>
               </div>
             </div>

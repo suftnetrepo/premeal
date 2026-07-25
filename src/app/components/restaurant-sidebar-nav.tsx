@@ -8,7 +8,7 @@ import {
   Star,
   UtensilsCrossed,
   CalendarDays,
-  MapPin,
+  Settings,
   Wallet,
   Truck,
   LogOut,
@@ -21,7 +21,7 @@ const ITEMS = [
   { href: "/restaurant/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/restaurant/deliveries", label: "Deliveries", icon: CalendarDays },
   { href: "/restaurant/drivers", label: "Drivers", icon: Truck },
-  { href: "/restaurant/location", label: "Location", icon: MapPin },
+  { href: "/restaurant/location", label: "Settings", icon: Settings },
   { href: "/restaurant/payouts", label: "Payouts", icon: Wallet },
 ];
 
@@ -41,7 +41,7 @@ export function RestaurantSidebarNav() {
           button being merely at the bottom vs. pushed out of view
           entirely with no way to reach it on a shorter screen. */}
       <div
-        className="flex items-center gap-1 overflow-x-auto px-2 flex-1 min-w-0
+        className="flex items-center gap-1 overflow-x-auto no-scrollbar px-2 flex-1 min-w-0
           sm:flex-col sm:items-center sm:gap-1 sm:pt-4 sm:px-0 sm:overflow-y-auto sm:overflow-x-visible sm:min-h-0"
       >
         {ITEMS.map((item) => {

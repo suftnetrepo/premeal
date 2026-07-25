@@ -177,7 +177,7 @@ export default async function RestaurantOrderHistoryPage({
       </div>
       <p className="text-sm text-stone-500 mb-6">{restaurant.name} — all orders received.</p>
 
-      <div className="flex gap-2 overflow-x-auto mb-3 pb-1">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
         {FILTERS.map((f) => (
           <Link
             key={f.value}
@@ -192,7 +192,7 @@ export default async function RestaurantOrderHistoryPage({
       </div>
 
       {availableDates.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto mb-6 pb-1">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-1">
           <Link
             href={buildFilterHref({ date: null })}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full border ${

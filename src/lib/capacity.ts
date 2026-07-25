@@ -21,7 +21,12 @@ export const CONFIRMATION_WINDOW_MINUTES = 30;
 // accepted but the charge needed extra verification. See
 // lib/payment-actions.ts.
 export const PAYMENT_ACTION_WINDOW_MINUTES = 30;
-export const DELIVERY_FEE_CENTS = 300; // flat £3 for this MVP — vary by distance/restaurant later
+// The starting value new restaurants get (matches the schema's own
+// default — see Restaurant.deliveryFeeCents), and what the settings page
+// pre-fills for a restaurant that's never customized it. No longer the
+// actual charged amount for every order — that now comes from the
+// specific restaurant's own deliveryFeeCents, set on /restaurant/location.
+export const DEFAULT_DELIVERY_FEE_CENTS = 300;
 export const SUBSCRIPTION_DISCOUNT_PERCENT = 5; // + free delivery; see src/lib/subscriptions.ts
 
 export class SlotFullError extends Error {
@@ -242,7 +247,7 @@ export async function createOrder(input: CreateOrderInput) {
       : await tx.subscription.findUnique({ where: { userId: input.customerId } });
     const hasActiveSubscription = subscription?.status === "ACTIVE";
 
-    const deliveryFeeCents = hasActiveSubscription ? 0 : DELIVERY_FEE_CENTS;
+    const deliveryFeeCents = hasActiveSubscription ? 0 : restaurant.deliveryFeeCents;
     const subscriptionDiscountCents = hasActiveSubscription
       ? Math.round((subtotalCents * SUBSCRIPTION_DISCOUNT_PERCENT) / 100)
       : 0;
