@@ -11,6 +11,16 @@ export function AddressSearch({ currentAddress }: { currentAddress?: string }) {
   const [error, setError] = useState<string | null>(null);
 
   function goToResults(lat: number, lng: number, formattedAddress: string) {
+    // A cookie, not localStorage — page.tsx is a Server Component, and a
+    // cookie is what a server component can actually read on the next
+    // request without an extra client-side round trip. 30 days is long
+    // enough to genuinely save a returning customer from retyping their
+    // address, short enough that a stale location doesn't linger forever
+    // for someone who's since moved.
+    document.cookie = `premeal_last_location=${encodeURIComponent(
+      JSON.stringify({ lat, lng, address: formattedAddress })
+    )}; max-age=${30 * 24 * 60 * 60}; path=/`;
+
     const params = new URLSearchParams({ lat: String(lat), lng: String(lng), address: formattedAddress });
     router.push(`/?${params.toString()}`);
   }
