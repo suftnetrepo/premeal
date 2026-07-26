@@ -154,13 +154,35 @@ export default function MenuPage() {
   const [newDraft, setNewDraft] = useState<DraftFields>(emptyDraft);
   const [addonsOpenId, setAddonsOpenId] = useState<string | null>(null);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const refresh = useCallback(async () => {
-    const [itemsRes, categoriesRes] = await Promise.all([
-      fetch("/api/restaurant/menu"),
-      fetch("/api/restaurant/categories"),
-    ]);
-    if (itemsRes.ok) setItems((await itemsRes.json()).items);
-    if (categoriesRes.ok) setCategories((await categoriesRes.json()).categories);
+    setLoadError(null);
+    try {
+      const [itemsRes, categoriesRes] = await Promise.all([
+        fetch("/api/restaurant/menu"),
+        fetch("/api/restaurant/categories"),
+      ]);
+      // Previously: if either request failed, its setter was just never
+      // called — `items` stayed null forever with zero visible signal,
+      // which is exactly what "stuck on Loading…" looks like. A 401 here
+      // usually means a stale login session (e.g. the database was
+      // reseeded, deleting the user your session cookie still points
+      // to) — surfacing that distinctly is more useful than a generic
+      // error, since the fix is just logging in again, not a real bug.
+      if (itemsRes.status === 401 || categoriesRes.status === 401) {
+        setLoadError("Your session has expired — log out and log back in.");
+        return;
+      }
+      if (!itemsRes.ok || !categoriesRes.ok) {
+        setLoadError("Could not load your menu. Try refreshing the page.");
+        return;
+      }
+      setItems((await itemsRes.json()).items);
+      setCategories((await categoriesRes.json()).categories);
+    } catch {
+      setLoadError("Could not reach the server.");
+    }
   }, []);
 
   useEffect(() => {
@@ -253,7 +275,11 @@ export default function MenuPage() {
   if (!items) {
     return (
       <main className="mx-auto max-w-4xl px-4 sm:px-6 py-10 w-full">
-        <p className="text-sm text-stone-400">Loading…</p>
+        {loadError ? (
+          <p className="text-sm text-red-600">{loadError}</p>
+        ) : (
+          <p className="text-sm text-stone-400">Loading…</p>
+        )}
       </main>
     );
   }
