@@ -10,7 +10,12 @@ import { PaySignupFeeButton } from "./pay-signup-fee-button";
 import { StarDisplay } from "@/app/components/stars";
 import { SIGNUP_FEE_CENTS } from "@/lib/restaurant-fees";
 
-export default async function RestaurantDashboardPage() {
+export default async function RestaurantDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ signupFeePaid?: string }>;
+}) {
+  const { signupFeePaid } = await searchParams;
   const user = await getCurrentUser();
 
   if (!user) redirect("/login");
@@ -145,6 +150,26 @@ export default async function RestaurantDashboardPage() {
       {/* Rejection stays its own distinct alert, deliberately not folded
           into the checklist below — it's a real problem needing the
           owner's attention, not a step waiting to be checked off. */}
+      {/* Cross-checked against the real signupFeePaidAt field, not just
+          the redirect param on its own — the webhook that actually marks
+          payment as received is a separate, asynchronous request from
+          this redirect, so there's a real (if usually brief) window
+          where a customer could land back here before it's caught up.
+          Claiming success before that's confirmed would be a false
+          promise, not a nicety. */}
+      {signupFeePaid === "1" && hasPaidSignupFee && (
+        <div className="border border-green-200 bg-green-50 rounded-xl p-4 mb-6">
+          <p className="text-sm font-medium text-green-800">Payment received — you&apos;re all set.</p>
+        </div>
+      )}
+      {signupFeePaid === "1" && !hasPaidSignupFee && (
+        <div className="border border-stone-200 bg-stone-50 rounded-xl p-4 mb-6">
+          <p className="text-sm text-stone-600">
+            Confirming your payment — this usually takes a few seconds. Refresh if this doesn&apos;t update shortly.
+          </p>
+        </div>
+      )}
+
       {restaurant.approvalStatus === "REJECTED" && (
         <div className="border border-red-200 bg-red-50 rounded-xl p-4 mb-6">
           <p className="text-sm font-medium text-red-800 mb-1">Your application wasn&apos;t approved</p>
