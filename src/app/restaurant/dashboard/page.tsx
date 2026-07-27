@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, CheckCircle2, Circle, ArrowRight } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/format";
@@ -45,7 +45,56 @@ export default async function RestaurantDashboardPage() {
 
   const isSetupComplete = availableItemCount > 0 && openSlotCount > 0;
   const hasPaidSignupFee = Boolean(restaurant.signupFeePaidAt);
-  const isLive = isSetupComplete && restaurant.approvalStatus === "APPROVED" && hasPaidSignupFee;
+  const isApproved = restaurant.approvalStatus === "APPROVED";
+  const isLive = isSetupComplete && isApproved && hasPaidSignupFee;
+
+  // Every real requirement to actually be found and paid, in the order
+  // they naturally happen — not just the two (menu, delivery days) that
+  // used to be the only things inside a checklist at all, with location/
+  // payouts/approval/the signup fee each fragmented into their own
+  // separately-colored alert box instead. One consolidated widget instead
+  // of five inconsistent ones is the actual "professional" fix here, not
+  // a visual restyle of boxes that shouldn't have been five boxes.
+  const steps = [
+    {
+      done: availableItemCount > 0,
+      label: "Add menu items",
+      detail: availableItemCount > 0 ? `${availableItemCount} available` : null,
+      href: "/restaurant/menu",
+    },
+    {
+      done: openSlotCount > 0,
+      label: "Set up delivery days",
+      detail: openSlotCount > 0 ? `${openSlotCount} open` : null,
+      href: "/restaurant/deliveries",
+    },
+    {
+      done: restaurant.latitude !== null,
+      label: "Set your location",
+      detail: null,
+      href: "/restaurant/location",
+    },
+    {
+      done: restaurant.stripeOnboardingComplete,
+      label: "Connect payouts",
+      detail: null,
+      href: "/restaurant/payouts",
+    },
+    {
+      done: isApproved,
+      label: "Get approved by Pre-Meal",
+      detail: isApproved ? null : "We review new restaurants before they go live",
+      href: null, // nothing to click — this one's on us, not the owner
+    },
+    {
+      done: hasPaidSignupFee,
+      label: "Pay the one-time signup fee",
+      detail: hasPaidSignupFee ? null : `£${(SIGNUP_FEE_CENTS / 100).toFixed(0)}, once — not recurring`,
+      href: null, // handled by the PaySignupFeeButton below, once approved
+    },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
+  const allDone = doneCount === steps.length;
 
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-10 w-full">
@@ -93,76 +142,71 @@ export default async function RestaurantDashboardPage() {
         </div>
       </div>
 
+      {/* Rejection stays its own distinct alert, deliberately not folded
+          into the checklist below — it's a real problem needing the
+          owner's attention, not a step waiting to be checked off. */}
       {restaurant.approvalStatus === "REJECTED" && (
-        <div className="border border-red-200 bg-red-50 rounded-xl p-4 mb-4">
+        <div className="border border-red-200 bg-red-50 rounded-xl p-4 mb-6">
           <p className="text-sm font-medium text-red-800 mb-1">Your application wasn&apos;t approved</p>
           {restaurant.approvalNote && <p className="text-sm text-red-700">{restaurant.approvalNote}</p>}
         </div>
       )}
 
-      {restaurant.approvalStatus === "PENDING" && (
-        <div className="border border-gray-200 bg-gray-50 rounded-xl p-4 mb-4">
-          <p className="text-sm text-gray-600">
-            Waiting on admin approval. You can get your menu and delivery days ready in the meantime — the
-            signup fee opens up once you&apos;re approved.
-          </p>
-        </div>
-      )}
+      {/* One consolidated checklist — everything that used to be five
+          separately-colored boxes (pending-approval, approved-but-unpaid,
+          finish-setup, no-location, no-payouts) is now one consistent
+          list of real steps, each backed by the same data those boxes
+          used to check individually. Disappears entirely once every step
+          is actually done — an onboarding checklist that never goes away
+          for an established restaurant is clutter, not help. */}
+      {!allDone && restaurant.approvalStatus !== "REJECTED" && (
+        <div className="border border-stone-200 rounded-2xl p-5 mb-8 bg-white">
+          <div className="flex items-center justify-between mb-4">
+            <p className="font-semibold text-stone-900">Get ready to go live</p>
+            <p className="text-xs text-stone-400">
+              {doneCount} of {steps.length} done
+            </p>
+          </div>
+          <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden mb-5">
+            <div
+              className="h-full bg-orange-600 rounded-full transition-all"
+              style={{ width: `${(doneCount / steps.length) * 100}%` }}
+            />
+          </div>
 
-      {restaurant.approvalStatus === "APPROVED" && !hasPaidSignupFee && (
-        <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 mb-4">
-          <p className="text-sm font-medium text-orange-800 mb-1">You&apos;re approved — pay your signup fee to go live</p>
-          <p className="text-sm text-orange-700 mb-3">
-            A flat {"£50"}, charged once — not recurring, and not tied to sales. After this, the only ongoing
-            cost is the 12% commission on orders you actually receive.
-          </p>
-          <PaySignupFeeButton feeCents={SIGNUP_FEE_CENTS} />
-        </div>
-      )}
+          <div className="flex flex-col gap-3">
+            {steps.map((step) => (
+              <div key={step.label} className="flex items-center gap-3">
+                {step.done ? (
+                  <CheckCircle2 size={20} className="text-green-600 shrink-0" strokeWidth={2} />
+                ) : (
+                  <Circle size={20} className="text-stone-300 shrink-0" strokeWidth={2} />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${step.done ? "text-stone-400 line-through" : "text-stone-900 font-medium"}`}>
+                    {step.label}
+                  </p>
+                  {step.detail && <p className="text-xs text-stone-400">{step.detail}</p>}
+                </div>
+                {step.href && !step.done && (
+                  <Link
+                    href={step.href}
+                    className="text-xs text-orange-600 font-medium shrink-0 flex items-center gap-0.5 hover:text-orange-700"
+                  >
+                    Go <ArrowRight size={12} strokeWidth={2} />
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
 
-      {!isSetupComplete && (
-        <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 mb-8">
-          <p className="text-sm font-medium text-amber-800 mb-2">Finish setup to go live</p>
-          <ul className="text-sm flex flex-col gap-1.5">
-            <li className="flex items-center gap-2">
-              <span>{availableItemCount > 0 ? "✅" : "⬜️"}</span>
-              <Link href="/restaurant/menu" className="text-orange-700 underline">
-                Add menu items
-              </Link>
-              {availableItemCount > 0 && (
-                <span className="text-gray-500">({availableItemCount} available)</span>
-              )}
-            </li>
-            <li className="flex items-center gap-2">
-              <span>{openSlotCount > 0 ? "✅" : "⬜️"}</span>
-              <Link href="/restaurant/deliveries" className="text-orange-700 underline">
-                Set up delivery days
-              </Link>
-              {openSlotCount > 0 && <span className="text-gray-500">({openSlotCount} open)</span>}
-            </li>
-          </ul>
-        </div>
-      )}
-
-      {isLive && !restaurant.latitude && (
-        <div className="border border-gray-200 bg-gray-50 rounded-xl p-4 mb-4 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Add your address and delivery radius so nearby customers searching can find you.
-          </p>
-          <Link href="/restaurant/location" className="text-sm text-orange-600 shrink-0 ml-3">
-            Set location →
-          </Link>
-        </div>
-      )}
-
-      {isLive && !restaurant.stripeOnboardingComplete && (
-        <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 mb-8 flex items-center justify-between">
-          <p className="text-sm text-amber-800">
-            You can take orders, but payouts aren&apos;t set up — you won&apos;t get paid until this is done.
-          </p>
-          <Link href="/restaurant/payouts" className="text-sm text-orange-700 font-medium shrink-0 ml-3">
-            Set up payouts →
-          </Link>
+          {/* The one step with a real action beyond "go to another page"
+              — paying the signup fee happens right here, once approved. */}
+          {isApproved && !hasPaidSignupFee && (
+            <div className="mt-5 pt-5 border-t border-stone-100">
+              <PaySignupFeeButton feeCents={SIGNUP_FEE_CENTS} />
+            </div>
+          )}
         </div>
       )}
 
