@@ -6,12 +6,16 @@ import { geocodeAddress, GeocodingNotConfiguredError } from "@/lib/geocoding";
 import { unexpectedErrorResponse } from "@/lib/api-errors";
 
 const schema = z.object({
+  name: z.string().min(1).max(80),
   address: z.string().min(1),
   deliveryRadiusKm: z.number().positive().max(100),
   // £0 is a legitimate choice (a restaurant offering free delivery
   // themselves) — only the upper bound guards against a stray typo like
   // an extra zero, not against undercutting.
   deliveryFeeCents: z.number().int().min(0).max(2000),
+  // £0 minimum order is a legitimate choice too (no minimum at all) —
+  // same reasoning, the upper bound just catches an obvious typo.
+  minOrderCents: z.number().int().min(0).max(10000),
   description: z.string().max(500).nullable().optional(),
   phone: z.string().max(30).nullable().optional(),
   contactEmail: z.string().email().nullable().optional().or(z.literal("")),
@@ -22,22 +26,26 @@ export async function GET() {
   if (isFailure(result)) return result.error;
 
   const {
+    name,
     address,
     latitude,
     longitude,
     deliveryRadiusKm,
     deliveryFeeCents,
+    minOrderCents,
     imageUrl,
     description,
     phone,
     contactEmail,
   } = result.restaurant;
   return NextResponse.json({
+    name,
     address,
     latitude,
     longitude,
     deliveryRadiusKm,
     deliveryFeeCents,
+    minOrderCents,
     imageUrl,
     description,
     phone,
@@ -64,11 +72,19 @@ export async function POST(request: Request) {
     const restaurant = await prisma.restaurant.update({
       where: { id: result.restaurant.id },
       data: {
+        // The slug (Restaurant.slug) is deliberately left untouched here
+        // — restaurant pages route by permanent database id, not slug
+        // (confirmed against src/app/restaurants/[id]/page.tsx), so
+        // renaming has nothing to break. Re-deriving the slug from a new
+        // name would just be extra risk (a uniqueness collision to
+        // handle) for a value nothing actually depends on.
+        name: parsed.data.name.trim(),
         address: geocoded.formattedAddress,
         latitude: geocoded.latitude,
         longitude: geocoded.longitude,
         deliveryRadiusKm: parsed.data.deliveryRadiusKm,
         deliveryFeeCents: parsed.data.deliveryFeeCents,
+        minOrderCents: parsed.data.minOrderCents,
         description: parsed.data.description || null,
         phone: parsed.data.phone || null,
         contactEmail: parsed.data.contactEmail || null,
@@ -76,11 +92,13 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
+      name: restaurant.name,
       address: restaurant.address,
       latitude: restaurant.latitude,
       longitude: restaurant.longitude,
       deliveryRadiusKm: restaurant.deliveryRadiusKm,
       deliveryFeeCents: restaurant.deliveryFeeCents,
+      minOrderCents: restaurant.minOrderCents,
       description: restaurant.description,
       phone: restaurant.phone,
       contactEmail: restaurant.contactEmail,

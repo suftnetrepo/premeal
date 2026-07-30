@@ -7,9 +7,11 @@ import { ProfileImageUpload } from "./profile-image-upload";
 import { Settings } from "lucide-react";
 
 export default function RestaurantSettingsPage() {
+  const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [radius, setRadius] = useState("5");
   const [deliveryFee, setDeliveryFee] = useState("3.00");
+  const [minOrder, setMinOrder] = useState("10.00");
   const [description, setDescription] = useState("");
   const [phone, setPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -23,12 +25,14 @@ export default function RestaurantSettingsPage() {
     const res = await fetch("/api/restaurant/location");
     if (res.ok) {
       const data = await res.json();
+      if (data.name) setName(data.name);
       if (data.address) {
         setSavedAddress(data.address);
         setAddress(data.address);
       }
       if (data.deliveryRadiusKm) setRadius(kmToMiles(data.deliveryRadiusKm).toFixed(1));
       if (typeof data.deliveryFeeCents === "number") setDeliveryFee((data.deliveryFeeCents / 100).toFixed(2));
+      if (typeof data.minOrderCents === "number") setMinOrder((data.minOrderCents / 100).toFixed(2));
       setImageUrl(data.imageUrl ?? null);
       setDescription(data.description ?? "");
       setPhone(data.phone ?? "");
@@ -49,9 +53,11 @@ export default function RestaurantSettingsPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        name,
         address,
         deliveryRadiusKm: milesToKm(Number(radius)),
         deliveryFeeCents: Math.round(Number(deliveryFee) * 100),
+        minOrderCents: Math.round(Number(minOrder) * 100),
         description: description.trim() || null,
         phone: phone.trim() || null,
         contactEmail: contactEmail.trim() || null,
@@ -63,6 +69,7 @@ export default function RestaurantSettingsPage() {
       setSaving(false);
       return;
     }
+    setName(data.name);
     setSavedAddress(data.address);
     setMessage("Saved.");
     setSaving(false);
@@ -83,6 +90,22 @@ export default function RestaurantSettingsPage() {
       <ProfileImageUpload key={imageUrl ?? "loading"} initialUrl={imageUrl} onUploaded={setImageUrl} />
 
       <div className="flex flex-col gap-3 max-w-md">
+        <label className="text-xs text-stone-500">
+          Restaurant name
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+            placeholder="e.g. Luigi's Kitchen"
+            className="mt-1 w-full border border-stone-200 rounded-xl p-2.5 text-sm"
+          />
+          <span className="block mt-1 text-[11px] text-stone-400">
+            Shown everywhere customers see you — the homepage, your order page, receipts. Safe to
+            change any time: your page link doesn&apos;t depend on this.
+          </span>
+        </label>
+
         <label className="text-xs text-stone-500">
           Restaurant address
           <div className="mt-1">
@@ -121,6 +144,23 @@ export default function RestaurantSettingsPage() {
           <span className="block mt-1 text-[11px] text-stone-400">
             What you charge customers for delivery — goes to you, same as before. £0 is a valid choice if
             you&apos;d rather offer free delivery yourself.
+          </span>
+        </label>
+
+        <label className="text-xs text-stone-500">
+          Minimum order (£)
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            value={minOrder}
+            onChange={(e) => setMinOrder(e.target.value)}
+            className="mt-1 w-32 border border-stone-200 rounded-xl p-2.5 text-sm"
+          />
+          <span className="block mt-1 text-[11px] text-stone-400">
+            The smallest order a customer can place with you — checked against their subtotal, before
+            delivery. £0 means no minimum.
           </span>
         </label>
 
@@ -183,7 +223,7 @@ export default function RestaurantSettingsPage() {
 
         <button
           onClick={save}
-          disabled={saving || !address}
+          disabled={saving || !address || !name.trim()}
           className="bg-orange-600 disabled:bg-stone-300 text-white rounded-xl px-4 py-2.5 text-sm self-start"
         >
           {saving ? "Saving…" : "Save settings"}

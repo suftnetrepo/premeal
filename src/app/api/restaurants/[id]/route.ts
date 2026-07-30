@@ -47,5 +47,7 @@ export async function GET(
     };
   });
 
+  console.log("restaurant delivery slots", slots);
+  console.log("restaurant delivery slots", restaurant);
   return NextResponse.json({ restaurant: { ...restaurant, deliverySlots: slots } });
 }
