@@ -16,7 +16,7 @@ export async function GET(
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
-      items: { include: { modifiers: true } },
+      items: { include: { modifiers: true, menuItem: { select: { imageUrl: true } } } },
       restaurant: true,
       slot: true,
       customer: true,

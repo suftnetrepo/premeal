@@ -684,6 +684,272 @@ since both would have been wrong foundations to build screens on top of:
   homepage and the API route now, so this can't drift apart again the way
   it just did.
 
+## Homepage: no restaurants shown until a real address is searched
+
+Matches the Just Eat/Deliveroo pattern (address first, then browse) —
+but this isn't just a cosmetic match, it directly closes a real problem
+already hit and debugged earlier in this build: a customer could
+previously browse and start ordering from a restaurant that turned out
+not to deliver to them at all, only discovering the mismatch partway
+through checkout. Requiring a real, searched address before any
+restaurant is shown makes that structurally impossible now — every
+restaurant on screen from that point on has already been confirmed
+(via `getListableRestaurants`'s existing radius filtering, which already
+existed and already worked correctly) to actually deliver to exactly
+where the customer is.
+
+The hero, value-prop cards, and stats section are unchanged, still
+shown only pre-search, same as before. What changed is the "Find your
+favourite" section (cuisine chips + the grid itself) — previously always
+rendered (showing every restaurant, unfiltered, before any search), now
+only renders once `isLocationSearch` is true. In its place, before a
+search: a plain, honest prompt to enter an address, not a placeholder
+waiting to be filled in.
+
+Also cleaned up a stale comment in this file left over from the Lorem
+Picsum placeholder image, since that was replaced with a real photo
+several turns ago and the comment never got updated to say so.
+
+## Real bug: menu page could hang on "Loading…" forever, no error shown
+
+`/restaurant/menu`'s data-fetching only ever handled the success case —
+`if (itemsRes.ok) setItems(...)`, with no `else`. If either request
+failed for any reason, its setter was simply never called, `items`
+stayed `null` forever, and the page showed "Loading…" indefinitely with
+zero visible signal that anything had gone wrong. The specific trigger
+this time was almost certainly a stale login session — the database had
+been reseeded (deleting all users) since the browser's session cookie
+was issued, so every API call correctly returned 401, and the page had
+no way to show that. Fixed with real error handling: a 401 now shows
+"Your session has expired — log out and log back in" specifically (that
+diagnosis matters, since the fix is just logging in again, not a real
+bug), anything else shows a generic but visible error instead of an
+infinite, silent loading state.
+
+## Customer order history: status filter chips
+
+Same filter chips as `/restaurant/orders` (Awaiting confirmation,
+Confirmed, Out for delivery, Delivered, Declined/expired), deliberately
+**without** the date filter — a customer's own order list is naturally
+far shorter than a restaurant's full history, so a second filter
+dimension wasn't earning its keep the way it does on the restaurant
+side. Reused the exact `null`-means-"clear this filter" pattern that
+fixed the "All doesn't clear" bug on the restaurant page rather than
+writing a simpler-looking version that could reintroduce the same
+ambiguity.
+
+## Account deletion — Apple App Store Guideline 5.1.1(v)
+
+`DELETE /api/account`, needed before any real App Store submission (any
+app with account creation must let a user delete it from within the
+app — a hard requirement, not a nice-to-have). Called by the mobile
+app's Account screen.
+
+**Anonymizes rather than hard-deletes when real history exists.**
+Checked every relation touching `User` before writing this:
+`Order.customer`, `Review.customer`, and `PromoRedemption.customer` are
+all `RESTRICT` foreign keys (no `onDelete` configured) — a genuine hard
+delete of a user with any order history would either crash outright or,
+worse, would need to cascade-delete a restaurant's own transaction
+records to succeed. Neither is acceptable. So: a user with zero real
+history gets a true, complete delete; a user with any orders, reviews,
+or promo redemptions gets their personal fields scrubbed (name, email,
+password — replaced with an unrecoverable random hash, not left blank
+or predictable) while the row itself stays, so the restaurant's side of
+each order still shows a real (if anonymous) customer instead of a
+broken reference. `Subscription` is deleted outright either way — it's
+fully the customer's own, nothing else depends on it, and it's also a
+`RESTRICT` relation that would otherwise block whichever path runs
+after it.
+
+**Deliberately scoped to the mobile app's actual usage** — doesn't check
+`Restaurant.ownerId` (also `RESTRICT`), since the only real caller today
+always signs up as `CUSTOMER` (hardcoded in the mobile signup call).
+Documented directly in the route file: if this endpoint ever becomes
+reachable by a restaurant owner, it needs that check added first — right
+now it would just fail safely (atomic transaction rollback, nothing
+corrupted) with a generic error rather than a clear one.
+
+## Restaurant name and minimum order — a real gap, not a missing UI
+
+Surfaced by a genuine question: where do you change a restaurant's name
+or minimum order amount? The honest answer was nowhere — neither field
+was editable anywhere on the platform, web or mobile. Both have existed
+in the schema since initial signup, but `name` was only ever set once at
+that point, and `minOrderCents` only ever appeared in *display* contexts
+(homepage cards, the restaurant page, promo code minimum-spend logic) —
+never in an editable form. Confirmed this by searching the whole
+codebase for both fields before concluding it was a real gap, not
+something to just point at.
+
+Added both to `/restaurant/location`, the existing settings page —
+extending something that already exists rather than building a new
+screen. **No migration needed** — both columns have existed since the
+very first schema, this only added the UI and API path to actually
+change them.
+
+**Renaming is genuinely safe, confirmed before writing any code**:
+restaurant pages route by permanent database id
+(`where: { id }` in `restaurants/[id]/page.tsx`), never by the `slug`
+field — so a name change can't break a bookmarked or shared link. `slug`
+itself is deliberately left untouched on rename; re-deriving it from a
+new name would just add a uniqueness-collision risk for a value nothing
+actually depends on.
+
+Mobile needed **no changes** — both fields were already in its
+`Restaurant` type from the start (unlike `deliveryFeeCents`/`phone`/
+`contactEmail`, which had to be added earlier), so it already displays
+whatever the backend returns once an owner changes it.
+
+## Signup fee payment: the missing success confirmation, fixed
+
+Found while tracing the whole payment flow end to end to confirm it was
+genuinely complete (it was — real Stripe Checkout, real signed webhook,
+real database update). The one real gap: the success redirect landed on
+`/restaurant/dashboard?signupFeePaid=1`, but nothing read that param, so
+there was no "payment received" moment — just the checklist step already
+checked once the page loaded.
+
+**Fixed by cross-checking against the real `signupFeePaidAt` field, not
+by trusting the redirect param alone** — the webhook that actually marks
+payment as received is a separate, asynchronous request from this
+redirect, so there's a real (if usually brief) window where someone
+could land back on the dashboard before the webhook's caught up. Showing
+a confident "you're all set" before that's actually confirmed would be a
+false promise, not a nicety — so `signupFeePaid=1` combined with the real
+field already being true shows the success message; combined with the
+field *not* being true yet shows an honest "confirming your payment,
+refresh shortly" instead.
+
+## Restaurant dashboard: one checklist instead of five separate boxes
+
+The dashboard already had a rudimentary checklist, but it only covered 2
+of the real 6 requirements to actually go live (menu items, delivery
+days) — location, payouts, admin approval, and the signup fee each had
+their own separately-colored alert box instead (pending-approval in
+gray, approved-but-unpaid in orange, no-location in gray, no-payouts in
+amber). Five inconsistent boxes stacked on top of each other is most of
+what was actually reading as "not professional," not a font or spacing
+problem.
+
+Consolidated into one widget — a real progress bar, consistent
+checkmark/circle icons instead of the previous ⬜️/✅ emoji, and every one
+of the 6 real steps in the order they naturally happen: menu items,
+delivery days, location, payouts, admin approval, signup fee. Rejection
+stays its own distinct red alert on purpose — that's a real problem
+needing the owner's attention, not a step waiting to be checked off, so
+folding it into the same checklist styling would have been dishonest
+about what kind of thing it actually is. The whole checklist disappears
+once every step is genuinely done — a setup guide that never goes away
+for an established, fully-live restaurant is clutter, not help.
+
+## Cuisine chips now show every supported cuisine, not just registered ones
+
+A deliberate reversal of the earlier "chips are computed from real
+restaurants only" decision — the earlier read was that showing a cuisine
+with zero restaurants would be a decorative, misleading chip. The
+counter-argument that won out: a chip that filters to a real (if
+currently empty) result set isn't fake data, it's an honest "we support
+this, nobody's delivering it to you yet" — closer to how most real
+marketplace filter UIs work. Chips now come from the 7 onboarding menu
+templates (Japanese, Italian, Indian, West African, Ethiopian, Healthy,
+American), unioned with whatever cuisine strings real restaurants
+actually have — so a restaurant that signed up with a custom cuisine
+string outside the 7 templates still gets its own chip, same as before.
+
+**What actually keeps this honest**: selecting a template cuisine with
+no matching restaurants doesn't show anything fake — it shows a real,
+specific empty state ("No Japanese restaurants deliver to that address
+yet — try browsing all cuisines instead"), genuinely distinguished now
+from "no restaurants deliver here at all" (a different, pre-existing
+message). Before this change, both cases showed the same generic
+"try a different address" text, which was actively misleading for the
+cuisine-filtered case — the actual problem there is the filter, not the
+address.
+
+## Homepage remembers your last searched location
+
+A returning customer used to have to retype their address every single
+visit, even though they'd already told the platform where they live —
+real, unnecessary friction, and not how the reference app (Just Eat)
+behaves either, where a remembered address just sits there in the
+header.
+
+**Storage: a cookie, for everyone** — logged in or a guest, deliberately
+not tied to a logged-in customer's saved default address, since that
+would leave guests with the exact same friction this was meant to fix.
+Set once, at the single point both the autocomplete-select and the
+fallback-geocode-on-submit paths in `AddressSearch` already funnel
+through — `goToResults()` — so there's only one place this can ever go
+out of sync. 30 days, long enough to be genuinely useful, short enough
+that a stale address doesn't linger forever for someone who's since
+moved.
+
+**The real subtlety: what "Change" has to mean.** Clicking Change clears
+the URL's lat/lng, but with the cookie fallback in place, a request with
+no lat/lng in the URL would otherwise just fall right back to the
+remembered address — showing the exact same results Change was supposed
+to get away from. Fixed with an explicit `clear=1` marker only the
+Change link sets, checked *before* falling back to the cookie at all —
+distinguishing "there's just no location in this particular URL" from
+"the customer explicitly asked to search somewhere else." Confirmed via
+the earlier "changing it updates what's remembered going forward"
+decision: submitting a *new* address through `AddressSearch` overwrites
+the cookie the same way as a first-time search, so whatever a customer
+searches next is what gets remembered from then on.
+
+**Every downstream link had to carry the effective location forward
+explicitly** — the cuisine chips, sort options, and rating toggle all
+build their hrefs from a `params` object that, before this, only ever
+came from the URL. Since a remembered location might never have been in
+this request's URL to begin with, `page.tsx` now builds an
+`effectiveParams` object merging in whichever source actually resolved
+(URL or cookie) before passing it to `HomepageResults` — otherwise
+clicking any filter while browsing on a remembered location would have
+silently dropped that location entirely.
+
+## Homepage split into two clean components — no behavior change
+
+`src/app/page.tsx` used to be one large component with `isLocationSearch`
+checks scattered throughout the whole return statement — the hero
+section gated on it, the browse section gated on it, the app-preview
+section gated on it, all as separate inline conditionals rather than one
+clear decision. Split into two components with zero conditionals about
+search state inside either one: `src/app/components/homepage-landing.tsx`
+(hero, value props, stats, app preview — only ever rendered before a
+search) and `src/app/components/homepage-results.tsx` (address bar,
+cuisine chips, sidebar filters, restaurant grid — only ever rendered
+after one). `page.tsx` itself is now just: fetch data, then one
+`if (!isLocationSearch) return <HomepageLanding ... />` before any of
+the restaurant filtering/sorting/popular-dishes work even runs, since
+none of that data exists yet to filter.
+
+**This is a structural refactor, not a UX change** — the actual behavior
+(nothing shown until a real address is entered, exactly why, described
+in the code comments this carried over) was already correct and already
+live; seeing it work correctly on a real screenshot is what confirmed
+that. What's different is that reasoning about either view no longer
+means mentally filtering out a dozen scattered conditionals that don't
+apply to whichever one you're looking at.
+
+## Adding the two new restaurants to Render without wiping existing data
+
+`prisma/seed.ts` is destructive by design (wipes everything, then
+recreates demo data) — exactly right for local dev, exactly wrong for
+Render, which by now has real driver invites and real orders placed
+through the live site that shouldn't be casually deleted just to get two
+more restaurants.
+
+`scripts/seed-additional-restaurants.ts` is the additive-only
+alternative — creates only Mama Kaya's Kitchen and Delhi Spice House,
+touches nothing else. Safe to run more than once: if either owner's
+email already exists, that restaurant is skipped rather than erroring on
+a duplicate unique constraint.
+
+```bash
+DATABASE_URL="your External Database URL" npx tsx scripts/seed-additional-restaurants.ts
+```
+
 ## Menu templates now create real categories, not one "All items" bucket
 
 Every template item now carries a `category` (Mains/Sides/Desserts/Drinks),
