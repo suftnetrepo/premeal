@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/format";
 import { getTopDishes } from "@/lib/restaurant-dashboard-stats";
 import { DashboardClient } from "./dashboard-client";
 import { PaySignupFeeButton } from "./pay-signup-fee-button";
+import { PauseOrdersToggle } from "./pause-orders-toggle";
 import { StarDisplay } from "@/app/components/stars";
 import { SIGNUP_FEE_CENTS } from "@/lib/restaurant-fees";
 
@@ -116,6 +117,8 @@ export default async function RestaurantDashboardPage({
       <p className="text-sm text-gray-500 mb-6">
         Respond within 30 minutes — unanswered orders auto-decline and refund automatically.
       </p>
+
+      <PauseOrdersToggle initialIsActive={restaurant.isActive} />
 
       {/* Real stats only — menu size, real order count, real rating. No
           "followers/subscriptions" — no social/follow feature exists. */}

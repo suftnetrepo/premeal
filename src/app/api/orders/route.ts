@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@prisma/client";
-import { createOrder, SlotFullError, SlotClosedError, InvalidModifierSelectionError, RestaurantNotApprovedError, DeliveryOutOfRangeError } from "@/lib/capacity";
+import { createOrder, SlotFullError, SlotClosedError, InvalidModifierSelectionError, RestaurantNotApprovedError, RestaurantPausedError, DeliveryOutOfRangeError } from "@/lib/capacity";
 import { PromoCodeError } from "@/lib/promotions";
 import { getCurrentUser } from "@/lib/auth";
 import { unexpectedErrorResponse } from "@/lib/api-errors";
@@ -62,6 +62,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
     if (err instanceof RestaurantNotApprovedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    if (err instanceof RestaurantPausedError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
     if (err instanceof DeliveryOutOfRangeError) {

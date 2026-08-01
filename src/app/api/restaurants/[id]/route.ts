@@ -35,6 +35,19 @@ export async function GET(
     return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
   }
 
+  // Same reasoning as the web restaurant page's equivalent check
+  // (src/app/restaurants/[id]/page.tsx) — temporary and owner-controlled,
+  // so a distinct response rather than a plain 404, and deliberately not
+  // just the full menu with an isActive flag buried in it. The mobile
+  // client shouldn't have to notice that flag itself inside a large
+  // payload; a dedicated, unambiguous status is easier to build against
+  // correctly. The real enforcement either way is still inside
+  // createOrder() itself — this is what makes the same fact visible
+  // before checkout instead of only failing there.
+  if (!restaurant.isActive) {
+    return NextResponse.json({ error: "not_accepting_orders", restaurantName: restaurant.name }, { status: 409 });
+  }
+
   // Expose remaining spots + a simple traffic-light status, don't make the
   // client re-derive capacity math.
   const slots = restaurant.deliverySlots.map((slot) => {

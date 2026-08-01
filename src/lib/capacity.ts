@@ -109,6 +109,22 @@ export class RestaurantNotApprovedError extends Error {
   }
 }
 
+// Deliberately a separate class from RestaurantNotApprovedError above,
+// even though the two messages sound similar — conflating "never
+// approved" with "the owner paused new orders" would be genuinely
+// misleading to see in logs later, even if a customer doesn't need to
+// know the difference. Restaurant.isActive already existed in the
+// schema but was only ever checked when listing restaurants, never here
+// at the point an order is actually created — meaning a customer with a
+// direct/bookmarked link to a restaurant that just paused could still
+// place an order nobody would ever see or confirm.
+export class RestaurantPausedError extends Error {
+  constructor() {
+    super("This restaurant isn't accepting new orders right now — check back later.");
+    this.name = "RestaurantPausedError";
+  }
+}
+
 export class DeliveryOutOfRangeError extends Error {
   constructor(message: string) {
     super(message);
@@ -169,6 +185,9 @@ export async function createOrder(input: CreateOrderInput) {
     const restaurant = await tx.restaurant.findUniqueOrThrow({ where: { id: input.restaurantId } });
     if (restaurant.approvalStatus !== "APPROVED" || !restaurant.signupFeePaidAt) {
       throw new RestaurantNotApprovedError();
+    }
+    if (!restaurant.isActive) {
+      throw new RestaurantPausedError();
     }
 
     const slot = await tx.deliverySlot.findUniqueOrThrow({ where: { id: input.slotId } });

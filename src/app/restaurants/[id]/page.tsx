@@ -38,6 +38,29 @@ export default async function RestaurantPage({
 
   if (!restaurant || restaurant.approvalStatus !== "APPROVED" || !restaurant.signupFeePaidAt) notFound();
 
+  // Deliberately not notFound() — unlike "never approved," this is a
+  // temporary, owner-controlled state, and the restaurant genuinely
+  // exists. A customer following a bookmarked or shared link deserves a
+  // clear reason ("check back later"), not a page that looks broken or
+  // permanently gone. This also protects anyone who had this exact page
+  // open in a tab before the owner paused things — the actual, final
+  // safety net is still the isActive check inside createOrder() itself,
+  // this is just making the same fact visible up front instead of only
+  // failing silently at checkout.
+  if (!restaurant.isActive) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-16 w-full text-center">
+        <p className="text-2xl font-bold text-stone-900 mb-2">{restaurant.name}</p>
+        <p className="text-stone-500 mb-6">
+          This restaurant isn&apos;t accepting new orders right now — check back later.
+        </p>
+        <Link href="/" className="text-orange-600 font-medium">
+          ← Browse other restaurants
+        </Link>
+      </main>
+    );
+  }
+
   const reviews = await prisma.review.findMany({
     where: { restaurantId: id },
     include: { customer: true },
