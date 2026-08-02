@@ -18,13 +18,24 @@ export class OrderStatusError extends Error {
 }
 
 /** For the customer's order page — lets them mount Stripe's 3DS challenge. */
-export async function getClientSecretForOrder(orderId: string, customerId: string): Promise<string> {
+export async function getClientSecretForOrder(
+  orderId: string,
+  customerId: string
+): Promise<{ clientSecret: string; paymentMethodId: string | null }> {
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   if (order.customerId !== customerId) throw new NotAuthorizedError();
   if (order.status !== OrderStatus.PAYMENT_ACTION_REQUIRED || !order.stripePaymentIntentId) {
     throw new OrderStatusError("This order isn't waiting on payment verification.");
   }
-  return getPaymentActionClientSecret(order.stripePaymentIntentId);
+  const clientSecret = await getPaymentActionClientSecret(order.stripePaymentIntentId);
+  // Confirmed directly against Stripe's own records (not assumed): after
+  // an off-session confirmation attempt hits SCA, Stripe doesn't leave
+  // the PaymentIntent's payment_method attached — it clears it and moves
+  // the intent to requires_payment_method, while preserving the method
+  // that was actually used in last_payment_error.payment_method. The
+  // mobile recovery flow has to explicitly re-supply this id when
+  // confirming again; it can't assume the original attachment survived.
+  return { clientSecret, paymentMethodId: order.stripePaymentMethodId };
 }
 
 /**

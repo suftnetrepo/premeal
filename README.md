@@ -738,6 +738,63 @@ fixed the "All doesn't clear" bug on the restaurant page rather than
 writing a simpler-looking version that could reintroduce the same
 ambiguity.
 
+## 3D Secure recovery: payment method has to be re-supplied, not assumed attached
+
+Found via live testing, not a hypothetical — confirmed directly against
+Stripe's own API records, not inferred from docs alone. After an
+off-session confirmation attempt hits SCA (`authentication_required`),
+Stripe doesn't leave the PaymentIntent's `payment_method` attached — it
+clears it entirely and moves the intent to `requires_payment_method`,
+preserving the method that was actually used in
+`last_payment_error.payment_method` instead. `GET
+/api/orders/:id/payment-action` now returns `paymentMethodId` alongside
+`clientSecret` (sourced from `order.stripePaymentMethodId`, which the
+backend already had) — the mobile recovery flow needs this to explicitly
+re-supply the payment method when confirming again, since it can't
+assume the original attachment survived the SCA failure.
+
+## Pause new orders — closing a real gap, not adding a nice-to-have
+
+Prompted by a genuine question: orders are scheduled days in advance, so
+what actually happens if a restaurant becomes unavailable — holiday,
+sudden closure, overwhelmed — while their delivery slots are still
+sitting there bookable? Every order placed during that window would
+silently expire (no charge, but a bad experience, and *repeatedly*
+bad — not a one-off).
+
+`Restaurant.isActive` already existed in the schema, but was only ever
+checked when *listing* restaurants — never inside `createOrder()`
+itself, and there was no way for an owner to toggle it at all. Both
+gaps are now closed:
+
+- **`createOrder()` now enforces it directly** — a new `RestaurantPausedError`,
+  deliberately a separate class from the existing `RestaurantNotApprovedError`
+  even though the customer-facing messages are similar, since conflating
+  "never approved" with "temporarily paused" would be misleading in logs.
+- **`POST /api/restaurant/status`** — a small, dedicated toggle endpoint,
+  deliberately separate from the broader `/restaurant/location` settings
+  bundle, since pausing needs to be instant and easy to find, not buried
+  in a form with many other fields.
+- **A toggle at the very top of the owner dashboard** (`PauseOrdersToggle`),
+  above the stats and checklist — the first thing an owner sees, on
+  purpose.
+- **The customer-facing restaurant page shows a clear "not accepting
+  orders right now" state**, not a hard 404 (that's reserved for
+  restaurants that were never approved) and not silence until checkout
+  fails. A customer with a bookmarked or already-open link to a
+  restaurant that just paused deserves to know why, not a page that
+  looks broken.
+- **The mobile-facing `/api/restaurants/[id]` REST route gets the same
+  treatment** — a paused restaurant returns a distinct, minimal `409`
+  response instead of its full menu, so the mobile client has an
+  unambiguous signal to build against rather than needing to notice an
+  `isActive` flag buried inside a large payload. `createOrder()`'s
+  enforcement is still the real safety net regardless of client — this
+  just makes the same fact visible before checkout instead of only
+  failing there.
+
+No migration needed — `isActive` already existed.
+
 ## Account deletion — Apple App Store Guideline 5.1.1(v)
 
 `DELETE /api/account`, needed before any real App Store submission (any

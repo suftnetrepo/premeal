@@ -15,8 +15,8 @@ export async function GET(
   }
 
   try {
-    const clientSecret = await getClientSecretForOrder(id, user.id);
-    return NextResponse.json({ clientSecret });
+    const { clientSecret, paymentMethodId } = await getClientSecretForOrder(id, user.id);
+    return NextResponse.json({ clientSecret, paymentMethodId });
   } catch (err) {
     if (err instanceof NotAuthorizedError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
