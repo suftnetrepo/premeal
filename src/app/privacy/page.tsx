@@ -1,19 +1,8 @@
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-16 w-full">
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8">
-        <p className="text-sm text-amber-800 font-medium mb-1">Draft — not reviewed by a lawyer</p>
-        <p className="text-sm text-amber-700">
-          This is a first-pass draft listing the data this app actually collects and the real third parties
-          it actually sends data to, written to save a lawyer time, not to replace one. It does not satisfy
-          GDPR, CCPA, or any other real requirement on its own — every bracketed placeholder needs a real
-          decision, and the whole document needs real legal review before this app collects data from real
-          customers. Nothing on this page is legal advice.
-        </p>
-      </div>
-
       <h1 className="text-2xl font-semibold mb-1">Privacy Policy</h1>
-      <p className="text-sm text-stone-400 mb-8">Draft — last updated [DATE]</p>
+      <p className="text-sm text-stone-400 mb-8">Last updated 2 August 2026</p>
 
       <div className="flex flex-col gap-6 text-sm text-stone-600">
         <section>
@@ -52,26 +41,35 @@ export default function PrivacyPage() {
           <p>
             We use a single session cookie to keep you logged in. It contains a signed token identifying your
             account — it is not used for advertising or cross-site tracking, and we don&apos;t currently use
-            any analytics or advertising cookies. [If that changes — analytics, ad tracking, etc. — this
-            section needs updating and likely a cookie consent banner.]
+            any analytics or advertising cookies.
           </p>
         </section>
 
         <section>
           <h2 className="text-base font-semibold text-stone-900 mb-2">5. How long we keep data</h2>
           <p>
-            [PLACEHOLDER — a real retention policy needs a business decision: how long order history, account
-            data, and uploaded images are kept after an account is closed, and the process for deleting them.]
+            Your account data is kept for as long as your account is active. If you delete your account,
+            your name, email, and password are permanently removed. If you have order history, your account
+            is anonymized rather than deleted outright — your personal details are scrubbed, but the order
+            itself stays on record for the restaurant, since that&apos;s their real transaction history to
+            keep, not just ours.
           </p>
         </section>
 
         <section>
           <h2 className="text-base font-semibold text-stone-900 mb-2">6. Your rights</h2>
           <p>
-            Depending on where you live, you may have rights to access, correct, or delete your personal data,
-            or to object to certain processing. [PLACEHOLDER — the specific rights and how to exercise them
-            depend on your jurisdiction (e.g. GDPR if operating in the UK/EU) and need real legal drafting.]
-            To ask about your data, contact [CONTACT EMAIL].
+            Because we operate in the UK, you have rights under the UK GDPR, including the right to access
+            the personal data we hold about you, correct inaccurate data, request deletion of your data (see
+            &quot;How long we keep data&quot; above for how this actually works), restrict or object to
+            certain processing, and receive your data in a portable format.
+          </p>
+          <p className="mt-2">
+            To exercise any of these, contact info@suftnet.com. If you&apos;re not satisfied with our
+            response, you can complain to the UK&apos;s data protection regulator, the{" "}
+            <a href="https://ico.org.uk" className="text-orange-600 underline">
+              Information Commissioner&apos;s Office
+            </a>.
           </p>
         </section>
 
@@ -86,7 +84,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="text-base font-semibold text-stone-900 mb-2">8. Contact</h2>
-          <p>Questions about this policy or your data: [CONTACT EMAIL]</p>
+          <p>Questions about this policy or your data: info@suftnet.com</p>
         </section>
       </div>
     </main>
