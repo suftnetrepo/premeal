@@ -104,17 +104,22 @@ export default function DriversPage() {
         {drivers?.map((d) => (
           <div
             key={d.id}
-            className="border border-stone-200 rounded-xl p-4 flex items-center justify-between"
+            className="border border-stone-200 rounded-xl p-4 flex items-center justify-between gap-3"
           >
-            <div>
-              <p className="text-sm font-medium">{d.driver?.name ?? d.email}</p>
-              <p className="text-xs text-stone-400">{d.email}</p>
+            {/* min-w-0 lets this shrink below its content's natural width —
+                without it, a long unbroken email address (no spaces to wrap
+                at) forces the whole row wider than the screen instead of
+                truncating, pushing "Remove" off-screen with no way to
+                reach it on mobile. */}
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{d.driver?.name ?? d.email}</p>
+              <p className="text-xs text-stone-400 truncate">{d.email}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               <span className={`text-xs px-2 py-0.5 rounded ${statusStyles[d.status] ?? "bg-stone-100 text-stone-600"}`}>
                 {d.status === "PENDING" ? "Awaiting response" : d.status === "ACTIVE" ? "Active" : "Declined"}
               </span>
-              <button onClick={() => handleRemove(d.id)} className="text-xs text-red-600">
+              <button onClick={() => handleRemove(d.id)} className="text-xs text-red-600 py-2 px-1">
                 Remove
               </button>
             </div>

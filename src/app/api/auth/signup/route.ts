@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, setSessionCookie, createAuthToken } from "@/lib/auth";
 import { sendVerificationEmail } from "@/lib/account-verification";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { verifyRecaptcha, recaptchaFailureResponse } from "@/lib/recaptcha";
 
 const signupSchema = z.object({
   name: z.string().min(1),
@@ -12,6 +13,10 @@ const signupSchema = z.object({
   role: z.enum(["CUSTOMER", "RESTAURANT_OWNER"]),
   restaurantName: z.string().min(1).optional(),
   cuisine: z.string().min(1).optional(),
+  // Optional, not required — see verifyRecaptcha()'s doc comment for why
+  // a missing token isn't treated as a rejection (the live mobile app has
+  // no way to produce one yet).
+  recaptchaToken: z.string().optional(),
 });
 
 function slugify(name: string): string {
@@ -35,6 +40,12 @@ export async function POST(request: Request) {
   }
   const input = parsed.data;
 
+  const recaptcha = await verifyRecaptcha(input.recaptchaToken, "signup");
+  if (!recaptcha.ok) {
+    console.warn(`[signup] reCAPTCHA rejected request from ${ip}: ${recaptcha.reason}`);
+    return recaptchaFailureResponse();
+  }
+
   if (input.role === "RESTAURANT_OWNER" && (!input.restaurantName || !input.cuisine)) {
     return NextResponse.json(
       { error: "restaurantName and cuisine are required for restaurant owners" },
@@ -44,7 +55,21 @@ export async function POST(request: Request) {
 
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
-    return NextResponse.json({ error: "An account with that email already exists" }, { status: 409 });
+    // Same non-enumerating wording pattern as forgot-password/route.ts's
+    // "If an account exists for that email, a reset link is on its way." —
+    // doesn't confirm outright that this specific email is taken.
+    // Residual gap, structural rather than a wording problem: unlike
+    // forgot-password (response-identical either way), this route's job is
+    // to actually create an account and log the caller into it, so a
+    // successful signup (201, real user + token) is still distinguishable
+    // from this response (409, no user/token) by status/shape alone, even
+    // with generic text. Fully closing that would mean deferring signup
+    // confirmation to an email click for both branches — a bigger behavior
+    // change than this fix, not done here.
+    return NextResponse.json(
+      { error: "If an account already exists for that email, log in instead." },
+      { status: 409 }
+    );
   }
 
   const passwordHash = await hashPassword(input.password);

@@ -32,8 +32,17 @@ export class InvalidUploadError extends Error {
   }
 }
 
-/** Uploads a menu-item photo to Cloudinary, returns its public HTTPS URL. */
-export async function uploadMenuItemImage(file: File): Promise<string> {
+export type CloudinaryUploadResult = {
+  url: string;
+  // Cloudinary's own asset identifier — the only thing its delete API
+  // (see deleteCloudinaryImage below) actually accepts. Callers must
+  // persist this alongside the URL if they ever want to clean the asset
+  // up later; there's no reliable way to recover it from the URL alone.
+  publicId: string;
+};
+
+/** Uploads a menu-item photo to Cloudinary, returns its URL and public_id. */
+export async function uploadMenuItemImage(file: File): Promise<CloudinaryUploadResult> {
   ensureConfigured();
 
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -54,7 +63,7 @@ export async function uploadMenuItemImage(file: File): Promise<string> {
     transformation: [{ width: 800, height: 800, crop: "limit", quality: "auto" }],
   });
 
-  return result.secure_url;
+  return { url: result.secure_url, publicId: result.public_id };
 }
 
 /**
@@ -64,7 +73,7 @@ export async function uploadMenuItemImage(file: File): Promise<string> {
  * displayed as a banner, not a thumbnail — a portrait photo would
  * otherwise get badly letterboxed by the card layout.
  */
-export async function uploadRestaurantProfileImage(file: File): Promise<string> {
+export async function uploadRestaurantProfileImage(file: File): Promise<CloudinaryUploadResult> {
   ensureConfigured();
 
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -83,5 +92,23 @@ export async function uploadRestaurantProfileImage(file: File): Promise<string> 
     transformation: [{ width: 800, height: 450, crop: "fill", gravity: "auto", quality: "auto" }],
   });
 
-  return result.secure_url;
+  return { url: result.secure_url, publicId: result.public_id };
+}
+
+/**
+ * Deletes a Cloudinary asset by its public_id. Best-effort by design —
+ * every call site treats a rejection here as log-and-continue, never as
+ * a reason to fail the request it's cleaning up after. By the time this
+ * runs, the DB write it's tidying up behind has already succeeded, so a
+ * failed delete just leaves one more orphaned asset (the same state the
+ * whole pre-existing backlog is already in) rather than corrupting
+ * anything or blocking the user's actual action.
+ *
+ * Only ever call this with a publicId read back from the DB's own
+ * cloudinaryPublicId column (itself only ever populated from a prior
+ * upload's real response) — never one parsed or guessed from a URL.
+ */
+export async function deleteCloudinaryImage(publicId: string): Promise<void> {
+  ensureConfigured();
+  await cloudinary.uploader.destroy(publicId);
 }

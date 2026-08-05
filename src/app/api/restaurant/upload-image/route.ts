@@ -15,8 +15,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const url = await uploadMenuItemImage(file);
-    return NextResponse.json({ url });
+    const { url, publicId } = await uploadMenuItemImage(file);
+    return NextResponse.json({ url, publicId });
   } catch (err) {
     if (err instanceof CloudinaryNotConfiguredError) {
       return NextResponse.json({ error: err.message }, { status: 503 });

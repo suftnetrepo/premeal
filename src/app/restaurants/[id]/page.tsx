@@ -172,8 +172,8 @@ export default async function RestaurantPage({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {reviews.map((r) => (
                 <div key={r.id} className="border border-stone-200 rounded-xl p-4 bg-white">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-stone-900">{r.customer.name}</p>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-sm font-medium text-stone-900 truncate min-w-0">{r.customer.name}</p>
                     <StarDisplay rating={r.rating} />
                   </div>
                   <p className="text-xs text-stone-400 mb-1">{formatDate(r.createdAt)}</p>

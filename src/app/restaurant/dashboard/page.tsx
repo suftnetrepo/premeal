@@ -219,7 +219,7 @@ export default async function RestaurantDashboardPage({
                 {step.href && !step.done && (
                   <Link
                     href={step.href}
-                    className="text-xs text-orange-600 font-medium shrink-0 flex items-center gap-0.5 hover:text-orange-700"
+                    className="text-xs text-orange-600 font-medium shrink-0 flex items-center gap-0.5 hover:text-orange-700 py-2 px-1"
                   >
                     Go <ArrowRight size={12} strokeWidth={2} />
                   </Link>

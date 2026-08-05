@@ -13,13 +13,22 @@ type MenuItem = {
   description: string | null;
   priceCents: number;
   imageUrl: string | null;
+  cloudinaryPublicId: string | null;
   isAvailable: boolean;
   categoryId: string | null;
 };
 
-type DraftFields = { name: string; description: string; price: string; imageUrl: string };
+// imagePublicId tracks the Cloudinary public_id of whatever's currently
+// in imageUrl, so the backend can delete the right asset when it's
+// replaced — but only when imageUrl actually got there via the upload
+// button below. It's deliberately cleared any time imageUrl is edited by
+// hand (the "paste a photo URL directly" field), since a manually-typed
+// URL isn't known to correspond to any Cloudinary asset at all; keeping
+// a stale publicId around after that edit would mean it no longer
+// describes what's actually in imageUrl.
+type DraftFields = { name: string; description: string; price: string; imageUrl: string; imagePublicId: string };
 
-const emptyDraft: DraftFields = { name: "", description: "", price: "", imageUrl: "" };
+const emptyDraft: DraftFields = { name: "", description: "", price: "", imageUrl: "", imagePublicId: "" };
 const UNCATEGORIZED = "__uncategorized__";
 
 function DraftForm({
@@ -53,7 +62,7 @@ function DraftForm({
         setUploadError(typeof data.error === "string" ? data.error : "Upload failed");
         return;
       }
-      onChange({ ...value, imageUrl: data.url });
+      onChange({ ...value, imageUrl: data.url, imagePublicId: data.publicId ?? "" });
     } catch {
       setUploadError("Could not reach the server.");
     } finally {
@@ -123,7 +132,7 @@ function DraftForm({
         <input
           placeholder="Or paste a photo URL directly"
           value={value.imageUrl}
-          onChange={(e) => onChange({ ...value, imageUrl: e.target.value })}
+          onChange={(e) => onChange({ ...value, imageUrl: e.target.value, imagePublicId: "" })}
           className="flex-1 border border-stone-200 rounded-xl p-2 text-sm"
         />
       </div>
@@ -208,6 +217,7 @@ export default function MenuPage() {
       description: item.description ?? "",
       price: (item.priceCents / 100).toFixed(2),
       imageUrl: item.imageUrl ?? "",
+      imagePublicId: item.cloudinaryPublicId ?? "",
     });
   }
 
@@ -218,6 +228,7 @@ export default function MenuPage() {
       description: d.description || undefined,
       priceCents,
       imageUrl: d.imageUrl || "",
+      imagePublicId: d.imagePublicId || "",
     };
   }
 
@@ -332,21 +343,21 @@ export default function MenuPage() {
                 </option>
               ))}
             </select>
-            <button onClick={() => startEdit(item)} className="text-xs border border-stone-300 rounded-xl px-2 py-1">
+            <button onClick={() => startEdit(item)} className="text-xs border border-stone-300 rounded-xl px-3 py-2">
               Edit
             </button>
             <button
               onClick={() => setAddonsOpenId(addonsOpenId === item.id ? null : item.id)}
-              className="text-xs border border-stone-300 rounded-xl px-2 py-1"
+              className="text-xs border border-stone-300 rounded-xl px-3 py-2"
             >
               Add-ons
             </button>
-            <button onClick={() => toggleAvailable(item)} className="text-xs border border-stone-300 rounded-xl px-2 py-1">
+            <button onClick={() => toggleAvailable(item)} className="text-xs border border-stone-300 rounded-xl px-3 py-2">
               {item.isAvailable ? "Hide" : "Show"}
             </button>
             <button
               onClick={() => removeItem(item)}
-              className="text-xs text-red-600 border border-red-200 rounded-xl px-2 py-1"
+              className="text-xs text-red-600 border border-red-200 rounded-xl px-3 py-2"
             >
               Remove
             </button>

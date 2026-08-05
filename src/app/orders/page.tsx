@@ -124,9 +124,9 @@ export default async function OrderHistoryPage({
             href={`/orders/${order.id}`}
             className="block border border-gray-200 rounded-xl p-4 hover:border-orange-300 transition-colors"
           >
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-medium text-sm">{order.restaurant.name}</p>
-              <span className={`text-xs px-2 py-0.5 rounded ${statusStyles[order.status] ?? "bg-gray-100 text-gray-600"}`}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="font-medium text-sm truncate min-w-0">{order.restaurant.name}</p>
+              <span className={`shrink-0 text-xs px-2 py-0.5 rounded ${statusStyles[order.status] ?? "bg-gray-100 text-gray-600"}`}>
                 {statusLabels[order.status] ?? order.status}
               </span>
             </div>

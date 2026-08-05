@@ -24,7 +24,21 @@ export async function Nav() {
         </Link>
 
         {user ? (
-          <div className="flex items-center gap-5">
+          // gap-3 sm:gap-5 + hidden-on-mobile name: with the full desktop
+          // gap and the name always shown, a realistic (i.e. not "Demo
+          // Customer"-short) name wrapped inside this fixed h-16 header and
+          // visibly collided with the logo above it and the page content
+          // below it — the exact "not responsive at all" symptom, just one
+          // that only a long-enough name reproduces. Fixed the same way
+          // restaurant-shell.tsx already handles its own header: the name
+          // is decorative (not a page a customer needs to reach) so it's
+          // the one hidden on mobile, not "My orders"/"Addresses" — those
+          // stay reachable at every width. Pre-Meal+ is a promotional
+          // upsell link (not account management a customer needs), so it
+          // gets the same hidden-on-mobile treatment as the marketing
+          // links below — same tradeoff, lower stakes than hiding a page
+          // there'd be no other way to reach.
+          <div className="flex items-center gap-3 sm:gap-5">
             {user.role === "CUSTOMER" && (
               <>
                 <Link href="/orders" className="text-sm text-stone-500 hover:text-stone-900 transition-colors">
@@ -34,13 +48,13 @@ export async function Nav() {
                   Addresses
                 </Link>
                 {(subscriptionsEnabled || hasExistingSubscription) && (
-                  <Link href="/subscribe" className="text-sm text-stone-500 hover:text-stone-900 transition-colors">
+                  <Link href="/subscribe" className="text-sm text-stone-500 hover:text-stone-900 transition-colors hidden sm:inline">
                     Pre-Meal+
                   </Link>
                 )}
               </>
             )}
-            <span className="text-sm text-stone-400">{user.name}</span>
+            <span className="text-sm text-stone-400 hidden sm:inline max-w-40 truncate">{user.name}</span>
             <LogoutButton />
           </div>
         ) : (

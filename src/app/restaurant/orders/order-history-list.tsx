@@ -256,9 +256,9 @@ export function OrderHistoryList({
               onClick={() => setSelected(order)}
               className="text-left border border-stone-200 rounded-xl p-4 hover:border-orange-300 hover:shadow-sm transition-all"
             >
-              <div className="flex items-center justify-between mb-1">
-                <p className="font-medium text-sm">{order.customer.name}</p>
-                <span className={`text-xs px-2 py-0.5 rounded ${statusStyles[order.status] ?? "bg-stone-100 text-stone-600"}`}>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="font-medium text-sm truncate min-w-0">{order.customer.name}</p>
+                <span className={`shrink-0 text-xs px-2 py-0.5 rounded ${statusStyles[order.status] ?? "bg-stone-100 text-stone-600"}`}>
                   {statusLabels[order.status] ?? order.status}
                 </span>
               </div>
@@ -288,14 +288,14 @@ export function OrderHistoryList({
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSelected(null)} aria-hidden="true" />
           <div className="relative bg-white w-full sm:max-w-md h-full overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white border-b border-stone-100 p-5 flex items-center justify-between">
-              <div>
-                <p className="font-bold text-stone-900">{selected.customer.name}</p>
+            <div className="sticky top-0 bg-white border-b border-stone-100 p-5 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-bold text-stone-900 truncate">{selected.customer.name}</p>
                 <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded ${statusStyles[selected.status] ?? "bg-stone-100 text-stone-600"}`}>
                   {statusLabels[selected.status] ?? selected.status}
                 </span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => window.print()}
                   aria-label="Print receipt"

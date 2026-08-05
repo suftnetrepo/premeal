@@ -8,6 +8,9 @@ const createItemSchema = z.object({
   description: z.string().optional(),
   priceCents: z.number().int().positive(),
   imageUrl: z.string().url().optional().or(z.literal("")),
+  // See the identical field on updateItemSchema in
+  // menu/[itemId]/route.ts for why this is separate from imageUrl.
+  imagePublicId: z.string().optional().or(z.literal("")),
   categoryId: z.string().nullable().optional(),
 });
 
@@ -39,10 +42,15 @@ export async function POST(request: Request) {
     }
   }
 
+  // imagePublicId isn't a real Prisma column — see updateItemSchema's
+  // comment in menu/[itemId]/route.ts.
+  const { imagePublicId, ...rest } = parsed.data;
+
   const item = await prisma.menuItem.create({
     data: {
-      ...parsed.data,
+      ...rest,
       imageUrl: parsed.data.imageUrl || undefined,
+      cloudinaryPublicId: imagePublicId || undefined,
       restaurantId: result.restaurant.id,
     },
   });

@@ -125,6 +125,15 @@ model Restaurant {
   cuisine        String
   description    String?
   imageUrl       String?
+  // Cloudinary's own asset identifier — needed to ever delete the asset
+  // behind imageUrl (Cloudinary's destroy API takes this, not the URL).
+  // Nullable: only ever set going forward, at upload time, from
+  // Cloudinary's own upload response — never guessed/parsed out of
+  // imageUrl after the fact. Null means either no image, or an image set
+  // before this column existed (the pre-existing orphaned-image backlog —
+  // see cloudinary.ts) — either way, nothing should ever attempt to
+  // delete a Cloudinary asset without a real publicId in hand.
+  cloudinaryPublicId String?
   minOrderCents  Int           @default(1000)
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
@@ -254,6 +263,12 @@ model MenuItem {
   description    String?
   priceCents     Int
   imageUrl       String?
+  // Same reasoning as Restaurant.cloudinaryPublicId above — only ever
+  // populated at upload time from Cloudinary's own response. Notably
+  // null for any item whose imageUrl was set via the "paste a photo URL
+  // directly" field in the menu editor, since that URL isn't guaranteed
+  // to even be a Cloudinary asset.
+  cloudinaryPublicId String?
   isAvailable    Boolean      @default(true)
   isSeasonal     Boolean      @default(false)
 

@@ -3,10 +3,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { verifyPassword, setSessionCookie, createAuthToken } from "@/lib/auth";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { verifyRecaptcha, recaptchaFailureResponse } from "@/lib/recaptcha";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  // Optional — see verifyRecaptcha()'s doc comment for why a missing
+  // token isn't treated as a rejection (the live mobile app has no way to
+  // produce one yet).
+  recaptchaToken: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -18,6 +23,27 @@ export async function POST(request: Request) {
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
+
+  // Per-IP alone only stops one IP hammering many accounts — it does
+  // nothing against many IPs (or a botnet) each making a few attempts
+  // against the same ONE target account, which never trips any single
+  // IP's own budget. This is additive to the IP check above, not a
+  // replacement, keyed on the submitted email itself (lowercased for a
+  // consistent bucket key — login's own lookup below is exact-case, this
+  // key doesn't need to match that, just be stable) so it catches that
+  // pattern regardless of how the attempts are spread across IPs. Applied
+  // unconditionally, before the user lookup, whether or not the email
+  // actually has an account — gating only real accounts would itself leak
+  // which emails exist, via which requests get rate-limited.
+  const emailKey = `login-account:${parsed.data.email.toLowerCase()}`;
+  const accountLimit = await checkRateLimit(emailKey, 10, 15 * 60_000);
+  if (!accountLimit.allowed) return rateLimitResponse(accountLimit.retryAfterSeconds!);
+
+  const recaptcha = await verifyRecaptcha(parsed.data.recaptchaToken, "login");
+  if (!recaptcha.ok) {
+    console.warn(`[login] reCAPTCHA rejected request from ${ip}: ${recaptcha.reason}`);
+    return recaptchaFailureResponse();
   }
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });

@@ -246,20 +246,20 @@ export function AddOnsEditor({ itemId }: { itemId: string }) {
           />
         ) : (
           <div key={group.id} className="bg-white border border-stone-200 rounded-xl p-3">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-sm font-medium">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <p className="text-sm font-medium min-w-0 truncate">
                 {group.name}{" "}
                 <span className="text-xs text-stone-400 font-normal">
                   ({group.minSelect}-{group.maxSelect})
                 </span>
               </p>
-              <div className="flex gap-2">
-                <button onClick={() => startEdit(group)} className="text-xs border border-stone-300 rounded-xl px-2 py-1">
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => startEdit(group)} className="text-xs border border-stone-300 rounded-xl px-3 py-2">
                   Edit
                 </button>
                 <button
                   onClick={() => removeGroup(group.id)}
-                  className="text-xs text-red-600 border border-red-200 rounded-xl px-2 py-1"
+                  className="text-xs text-red-600 border border-red-200 rounded-xl px-3 py-2"
                 >
                   Remove
                 </button>

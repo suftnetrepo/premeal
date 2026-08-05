@@ -178,19 +178,24 @@ export function DashboardClient({ restaurantId }: { restaurantId: string }) {
         <div className="flex flex-col gap-2">
           {confirmed.map((order) => (
             <div key={order.id} className="border border-stone-200 rounded-xl p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{order.customer.name}</p>
+              {/* Stacked below sm, row above — squeezing name + price +
+                  two buttons onto one unbreakable line left "Mark out for
+                  delivery" wrapping mid-word inside its own pill at
+                  375–390px. Giving the action row its own full-width line
+                  on mobile fixes that without shrinking the buttons. */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{order.customer.name}</p>
                   <p className="text-xs text-stone-500">
                     {formatDate(order.slot.date)} · {order.slot.windowStart}–{order.slot.windowEnd}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                   <p className="text-sm">{formatMoney(order.totalCents)}</p>
                   <button
                     disabled={busyId === order.id}
                     onClick={() => act(order.id, "out-for-delivery")}
-                    className="text-xs bg-orange-600 text-white rounded-xl px-3 py-1.5"
+                    className="text-xs bg-orange-600 text-white rounded-xl px-3 py-1.5 whitespace-nowrap"
                   >
                     Mark out for delivery
                   </button>
@@ -255,18 +260,23 @@ export function DashboardClient({ restaurantId }: { restaurantId: string }) {
           {outForDelivery.map((order) => (
             <div
               key={order.id}
-              className="flex items-center justify-between border border-stone-200 rounded-xl p-3"
+              className="flex items-center justify-between gap-3 border border-stone-200 rounded-xl p-3"
             >
-              <div>
-                <p className="text-sm font-medium">{order.customer.name}</p>
-                <p className="text-xs text-stone-500">{order.deliveryAddress}</p>
+              {/* min-w-0 + wrap-break-word: a full address is meant to stay
+                  fully visible (unlike a name, truncating it would hide
+                  information a driver needs), it just needs to be allowed
+                  to wrap onto its own lines instead of forcing the row
+                  wider than the screen. */}
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{order.customer.name}</p>
+                <p className="text-xs text-stone-500 wrap-break-word">{order.deliveryAddress}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 <p className="text-sm">{formatMoney(order.totalCents)}</p>
                 <button
                   disabled={busyId === order.id}
                   onClick={() => act(order.id, "delivered")}
-                  className="text-xs border border-stone-300 rounded-xl px-3 py-1.5"
+                  className="text-xs border border-stone-300 rounded-xl px-3 py-1.5 whitespace-nowrap"
                 >
                   Mark delivered
                 </button>

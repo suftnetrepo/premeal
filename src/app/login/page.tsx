@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useRouter } from "next/navigation";
+import { RECAPTCHA_SCRIPT_SRC, getRecaptchaToken } from "@/lib/recaptcha-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,10 +17,11 @@ export default function LoginPage() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    const recaptchaToken = await getRecaptchaToken("login");
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, ...(recaptchaToken ? { recaptchaToken } : {}) }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -78,6 +81,7 @@ export default function LoginPage() {
         owner@sakurasushi.test / password123 <br />
         owner@luigiskitchen.test / password123
       </p>
+      {RECAPTCHA_SCRIPT_SRC && <Script src={RECAPTCHA_SCRIPT_SRC} strategy="afterInteractive" />}
     </main>
   );
 }

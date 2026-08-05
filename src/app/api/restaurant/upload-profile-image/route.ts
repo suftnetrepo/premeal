@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireOwnedRestaurant, isFailure } from "@/lib/restaurant-auth";
-import { uploadRestaurantProfileImage, CloudinaryNotConfiguredError, InvalidUploadError } from "@/lib/cloudinary";
+import {
+  uploadRestaurantProfileImage,
+  deleteCloudinaryImage,
+  CloudinaryNotConfiguredError,
+  InvalidUploadError,
+} from "@/lib/cloudinary";
 import { prisma } from "@/lib/db";
 import { unexpectedErrorResponse } from "@/lib/api-errors";
 
@@ -15,12 +20,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
+  // Read before the upload/update below overwrites it — this is the
+  // asset (if any) that's about to become orphaned.
+  const previousPublicId = result.restaurant.cloudinaryPublicId;
+
   try {
-    const url = await uploadRestaurantProfileImage(file);
+    const { url, publicId } = await uploadRestaurantProfileImage(file);
     await prisma.restaurant.update({
       where: { id: result.restaurant.id },
-      data: { imageUrl: url },
+      data: { imageUrl: url, cloudinaryPublicId: publicId },
     });
+
+    // DB already points at the new image by this point — deleting the
+    // old one is cleanup, not something that can leave the DB in a
+    // broken state if it fails. Best-effort, never blocks the response.
+    if (previousPublicId) {
+      deleteCloudinaryImage(previousPublicId).catch((err) => {
+        console.warn(`[upload-profile-image] Failed to delete old Cloudinary asset ${previousPublicId}:`, err);
+      });
+    }
+
     return NextResponse.json({ url });
   } catch (err) {
     if (err instanceof CloudinaryNotConfiguredError) {

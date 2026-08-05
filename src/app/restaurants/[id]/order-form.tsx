@@ -581,7 +581,7 @@ export function OrderForm({
                 if (!item) return null;
                 return (
                   <div key={li.menuItemId} className="flex justify-between text-sm gap-2">
-                    <span className="text-stone-600">
+                    <span className="text-stone-600 min-w-0">
                       {li.quantity}× {item.name}
                     </span>
                     <span className="text-stone-900 shrink-0">

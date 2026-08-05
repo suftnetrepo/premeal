@@ -22,7 +22,10 @@ export async function RestaurantShell({ user, children }: { user: User; children
       <div className="flex-1 flex flex-col sm:pl-16 pb-16 sm:pb-0">
         <header className="border-b border-stone-200 bg-white">
           <div className="px-4 sm:px-6 h-14 flex items-center justify-between">
-            <Link href="/restaurant/dashboard" className="font-bold text-stone-900 flex items-center gap-1.5">
+            {/* h-full (not the parent's items-center default sizing) so the
+                tappable area is the whole 56px-tall header slot, not just
+                the 24px the logo glyph + text happen to render at. */}
+            <Link href="/restaurant/dashboard" className="h-full font-bold text-stone-900 flex items-center gap-1.5">
               <Image src="/logo.svg" alt="" width={22} height={22} /> Pre-Meal
             </Link>
             <div className="flex items-center gap-3">

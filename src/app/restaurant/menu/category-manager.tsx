@@ -116,31 +116,31 @@ export function CategoryManager({
                 <button
                   onClick={() => move(i, -1)}
                   disabled={i === 0 || busy}
-                  className="text-stone-400 disabled:opacity-30 leading-none text-xs"
+                  className="text-stone-400 disabled:opacity-30 leading-none text-xs p-2"
                 >
                   ▲
                 </button>
                 <button
                   onClick={() => move(i, 1)}
                   disabled={i === categories.length - 1 || busy}
-                  className="text-stone-400 disabled:opacity-30 leading-none text-xs"
+                  className="text-stone-400 disabled:opacity-30 leading-none text-xs p-2"
                 >
                   ▼
                 </button>
               </div>
-              <span className="flex-1 text-sm">{cat.name}</span>
+              <span className="flex-1 min-w-0 text-sm truncate">{cat.name}</span>
               <button
                 onClick={() => {
                   setEditingId(cat.id);
                   setEditName(cat.name);
                 }}
-                className="text-xs border border-stone-300 rounded-xl px-2 py-1"
+                className="text-xs border border-stone-300 rounded-xl px-3 py-2"
               >
                 Rename
               </button>
               <button
                 onClick={() => remove(cat.id)}
-                className="text-xs text-red-600 border border-red-200 rounded-xl px-2 py-1"
+                className="text-xs text-red-600 border border-red-200 rounded-xl px-3 py-2"
               >
                 Remove
               </button>

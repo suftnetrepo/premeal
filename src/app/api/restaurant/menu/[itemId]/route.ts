@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireOwnedRestaurant, isFailure } from "@/lib/restaurant-auth";
+import { deleteCloudinaryImage } from "@/lib/cloudinary";
 
 const updateItemSchema = z.object({
   name: z.string().min(1).optional(),
@@ -9,6 +10,13 @@ const updateItemSchema = z.object({
   priceCents: z.number().int().positive().optional(),
   isAvailable: z.boolean().optional(),
   imageUrl: z.string().url().optional().or(z.literal("")),
+  // Always sent alongside imageUrl by the menu editor (empty string when
+  // there's no known Cloudinary asset for the current image — e.g. it was
+  // set via the "paste a photo URL directly" field, not an upload). Kept
+  // separate from imageUrl itself since the DB column names differ
+  // (imageUrl vs cloudinaryPublicId) and this is never blindly spread
+  // into the Prisma update below — see the imageUrl-provided branch.
+  imagePublicId: z.string().optional().or(z.literal("")),
   categoryId: z.string().nullable().optional(),
 });
 
@@ -44,13 +52,38 @@ export async function PATCH(
     }
   }
 
+  // imagePublicId isn't a real Prisma column (it maps to
+  // cloudinaryPublicId) — pulled out here so it's never blindly spread
+  // into the update below, only ever set explicitly alongside imageUrl.
+  const { imagePublicId, ...rest } = parsed.data;
+  const newImageUrl = parsed.data.imageUrl !== undefined ? parsed.data.imageUrl || null : undefined;
+  // Same non-enumerable-string comparison whether the image is being
+  // replaced with a new one, cleared entirely, or swapped for a
+  // manually-pasted URL — any of those means the *old* asset (if it had
+  // a known public_id) is no longer referenced anywhere and should go.
+  const imageIsChanging = newImageUrl !== undefined && newImageUrl !== existing.imageUrl;
+
   const item = await prisma.menuItem.update({
     where: { id: itemId },
     data: {
-      ...parsed.data,
-      ...(parsed.data.imageUrl !== undefined ? { imageUrl: parsed.data.imageUrl || null } : {}),
+      ...rest,
+      ...(newImageUrl !== undefined
+        ? { imageUrl: newImageUrl, cloudinaryPublicId: imagePublicId || null }
+        : {}),
     },
   });
+
+  // Runs after the DB write succeeds, and never blocks the response — see
+  // deleteCloudinaryImage()'s doc comment for why. Guarded on the OLD
+  // item actually having a real public_id; a manually-pasted-URL image
+  // (or anything from the pre-existing backlog) has none, and nothing
+  // here ever tries to guess one from the URL instead.
+  if (imageIsChanging && existing.cloudinaryPublicId) {
+    deleteCloudinaryImage(existing.cloudinaryPublicId).catch((err) => {
+      console.warn(`[menu/${itemId}] Failed to delete old Cloudinary asset ${existing.cloudinaryPublicId}:`, err);
+    });
+  }
+
   return NextResponse.json({ item });
 }
 
@@ -80,5 +113,17 @@ export async function DELETE(
   }
 
   await prisma.menuItem.delete({ where: { id: itemId } });
+
+  // Same ordering reasoning as the PATCH handler above: the row (the
+  // only record of this asset's existence) is already gone from the DB
+  // by this point, so a failed delete here just leaves one more orphan —
+  // never a broken reference, and never something to fail this request
+  // over. Guarded on a real public_id existing, same as PATCH.
+  if (existing.cloudinaryPublicId) {
+    deleteCloudinaryImage(existing.cloudinaryPublicId).catch((err) => {
+      console.warn(`[menu/${itemId}] Failed to delete Cloudinary asset ${existing.cloudinaryPublicId} on item delete:`, err);
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }
