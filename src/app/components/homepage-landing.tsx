@@ -120,9 +120,16 @@ export function HomepageLanding({
       </section>
 
       {/* -----------------------------------------------------------------
-          App preview — three real screens (scheduling, checkout,
-          confirmation), built from this app's own UI language rather than
-          photographed device mockups.
+          App preview — six real screenshots from the actual built iOS/
+          Android apps (public/mobile-app/*.png), replacing the earlier
+          hand-built fake UI mockups now that real ones exist. Headline/
+          body copy deliberately left as-is (design direction: keep it).
+          Store badges are real artwork (public/apple-appstore-logo.png,
+          google_play_logo.png) but NOT yet linked — not publicly listed
+          on either store yet, real URLs to follow once they are. Same
+          reasoning footer.tsx's own comment already documents: badge
+          artwork implies a real listing, so it doesn't get a real <Link>
+          until there's a real destination.
       ----------------------------------------------------------------- */}
       <section className="bg-stone-50 border-t border-stone-100">
         <div className="mx-auto max-w-7xl px-4 py-10 grid md:grid-cols-2 gap-10 items-center">
@@ -135,61 +142,41 @@ export function HomepageLanding({
               Native iOS and Android apps are planned before launch — for now, order from your
               browser exactly the same way.
             </p>
-            <div className="flex gap-2">
-              <span className="text-xs text-stone-400 border border-stone-200 rounded-lg px-3 py-2 cursor-not-allowed bg-white">
-                iOS — coming soon
+            <div className="flex gap-3">
+              {/* cursor-not-allowed + no href, same as the text pills these
+                  replaced — TODO: wrap each in a real <Link href="..."> the
+                  moment the App Store / Play Store listing URLs exist. */}
+              <span className="cursor-not-allowed opacity-90">
+                <Image src="/apple-appstore-logo.png" alt="Download on the App Store — coming soon" width={135} height={45} className="h-11 w-auto" />
               </span>
-              <span className="text-xs text-stone-400 border border-stone-200 rounded-lg px-3 py-2 cursor-not-allowed bg-white">
-                Android — coming soon
+              <span className="cursor-not-allowed opacity-90">
+                <Image src="/google_play_logo.png" alt="Get it on Google Play — coming soon" width={152} height={45} className="h-11 w-auto" />
               </span>
             </div>
           </div>
 
           <div className="flex gap-4 justify-center overflow-x-auto no-scrollbar py-2">
             {[
-              { label: "Scheduling", content: "slot" },
-              { label: "Checkout", content: "checkout" },
-              { label: "Confirmed", content: "confirmed" },
+              { label: "Home", file: "home", alt: "Home screen — browse and search restaurants" },
+              { label: "Restaurants", file: "restaurant_list", alt: "Restaurant listing screen" },
+              { label: "Menu", file: "menu_details", alt: "Restaurant menu and item details screen" },
+           
+            
             ].map((screen) => (
-              <div key={screen.label} className="shrink-0 w-32 rounded-2xl border-4 border-stone-900 bg-white overflow-hidden shadow-lg">
+              <div key={screen.label} className="shrink-0 w-36 rounded-2xl border-4 border-stone-900 bg-white overflow-hidden shadow-lg">
                 <div className="h-4 bg-stone-900 flex items-center justify-center">
                   <div className="w-8 h-1.5 rounded-full bg-stone-700" />
                 </div>
-                <div className="p-2.5 h-48 flex flex-col">
-                  {screen.content === "slot" && (
-                    <>
-                      <p className="text-[9px] font-semibold text-stone-400 mb-1.5">SELECT A TIME</p>
-                      <div className="grid grid-cols-3 gap-1 mb-2">
-                        {["16", "17", "18"].map((h) => (
-                          <div key={h} className={`text-[8px] text-center rounded py-1 ${h === "18" ? "bg-orange-600 text-white" : "bg-stone-100 text-stone-500"}`}>
-                            {h}:00
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-auto bg-orange-600 rounded text-white text-[8px] text-center py-1.5">Continue</div>
-                    </>
-                  )}
-                  {screen.content === "checkout" && (
-                    <>
-                      <p className="text-[9px] font-semibold text-stone-400 mb-1.5">YOUR ORDER</p>
-                      <div className="flex flex-col gap-1 mb-2">
-                        <div className="h-1.5 bg-stone-100 rounded w-full" />
-                        <div className="h-1.5 bg-stone-100 rounded w-4/5" />
-                        <div className="h-1.5 bg-stone-100 rounded w-3/5" />
-                      </div>
-                      <div className="mt-auto bg-orange-600 rounded text-white text-[8px] text-center py-1.5">Place order</div>
-                    </>
-                  )}
-                  {screen.content === "confirmed" && (
-                    <div className="flex-1 flex flex-col items-center justify-center gap-1.5">
-                      <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
-                        <CheckCircle2 size={14} className="text-green-600" />
-                      </div>
-                      <p className="text-[8px] font-semibold text-stone-700 text-center">Order confirmed</p>
-                    </div>
-                  )}
+                <div className="relative w-full aspect-1242/2688">
+                  <Image
+                    src={`/mobile-app/${screen.file}.png`}
+                    alt={screen.alt}
+                    fill
+                    sizes="144px"
+                    className="object-cover"
+                  />
                 </div>
-                <p className="text-[9px] text-center text-stone-400 pb-2">{screen.label}</p>
+                <p className="text-[9px] text-center text-stone-400 py-2">{screen.label}</p>
               </div>
             ))}
           </div>
