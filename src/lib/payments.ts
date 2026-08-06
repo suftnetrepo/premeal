@@ -226,6 +226,16 @@ export async function refundOrder(order: Order): Promise<string> {
  * scripts/expire-orders-worker.ts.
  */
 export async function runPayoutSweep(): Promise<{ paidOut: number; skippedNotOnboarded: number }> {
+  // Oldest-eligible-first — the available Connect balance is one shared
+  // pool, not earmarked per order, so when it can't cover every eligible
+  // order in a single run, whichever orders this query returns *first*
+  // are the ones that actually get paid. With no explicit ordering,
+  // Postgres/Prisma's result order isn't guaranteed to have any relation
+  // to eligibility age — confirmed as a real bug, not a hypothetical one:
+  // an order fully funded and available for 4 days kept losing that race
+  // to orders that became eligible after it. Oldest-first guarantees the
+  // order waiting longest is always first in line for whatever balance
+  // exists this run.
   const eligible = await prisma.order.findMany({
     where: {
       status: "DELIVERED",
@@ -233,6 +243,7 @@ export async function runPayoutSweep(): Promise<{ paidOut: number; skippedNotOnb
       payoutSentAt: null,
       disputedAt: null,
     },
+    orderBy: { payoutEligibleAt: "asc" },
     include: { restaurant: true },
   });
 
