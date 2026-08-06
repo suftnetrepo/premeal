@@ -25,7 +25,21 @@ function fromAddress(): string {
   return from;
 }
 
-async function sendViaBrevo(to: string, subject: string, html: string): Promise<void> {
+/** Presence only — never logs the actual key/address values. */
+function envPresence(): { hasApiKey: boolean; hasFromEmail: boolean } {
+  return {
+    hasApiKey: Boolean(process.env.BREVO_API_KEY),
+    hasFromEmail: Boolean(process.env.BREVO_FROM_EMAIL),
+  };
+}
+
+async function sendViaBrevo(to: string, subject: string, html: string, context: string): Promise<void> {
+  const { hasApiKey, hasFromEmail } = envPresence();
+  console.log(
+    `[email] send attempt — context="${context}" to=${to} subject="${subject}" ` +
+      `BREVO_API_KEY=${hasApiKey ? "present" : "MISSING"} BREVO_FROM_EMAIL=${hasFromEmail ? "present" : "MISSING"}`
+  );
+
   const sender = getSender();
   const result = await sender.sendEmail({
     to: [{ email: to }],
@@ -35,8 +49,16 @@ async function sendViaBrevo(to: string, subject: string, html: string): Promise<
   });
 
   if (!result.success) {
+    console.error(
+      `[email] send FAILED — context="${context}" to=${to} subject="${subject}" ` +
+        `status=${result.status ?? "n/a"} error="${result.error}"`
+    );
     throw new Error(`Brevo error sending to ${to}: ${result.error}`);
   }
+
+  console.log(
+    `[email] send SUCCEEDED — context="${context}" to=${to} subject="${subject}" messageId=${result.messageId ?? "n/a"}`
+  );
 }
 
 /**
@@ -49,13 +71,26 @@ async function sendViaBrevo(to: string, subject: string, html: string): Promise<
  * retries above. Still throws either way, so existing caller-side
  * logging (see safeSend() in src/lib/notifications.ts) is unchanged.
  */
-export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+export async function sendEmail(to: string, subject: string, html: string, context: string = subject): Promise<void> {
   try {
-    await sendViaBrevo(to, subject, html);
+    await sendViaBrevo(to, subject, html, context);
   } catch (err) {
-    if (err instanceof EmailNotConfiguredError) throw err;
+    if (err instanceof EmailNotConfiguredError) {
+      // The one failure mode that previously left zero trace anywhere —
+      // never reaches Brevo (so nothing shows in its dashboard), and was
+      // rethrown here without queueing (so nothing showed in
+      // EmailQueueItem either). Exactly the silent-failure signature this
+      // logging exists to catch.
+      console.error(
+        `[email] send ABORTED — context="${context}" to=${to} subject="${subject}" reason="BREVO_API_KEY or BREVO_FROM_EMAIL not set"`
+      );
+      throw err;
+    }
 
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(
+      `[email] send failed after retries, queueing for later — context="${context}" to=${to} subject="${subject}" error="${message}"`
+    );
     try {
       await prisma.emailQueueItem.create({
         data: { to, subject, html, attempts: 1, lastError: message },
@@ -85,7 +120,7 @@ export async function processEmailQueue(): Promise<{ sent: number; failed: numbe
 
   for (const item of pending) {
     try {
-      await sendViaBrevo(item.to, item.subject, item.html);
+      await sendViaBrevo(item.to, item.subject, item.html, `queued retry: ${item.subject}`);
       await prisma.emailQueueItem.update({
         where: { id: item.id },
         data: { status: "SENT", sentAt: new Date() },

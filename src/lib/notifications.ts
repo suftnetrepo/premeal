@@ -16,13 +16,14 @@ function wrap(bodyHtml: string): string {
 /**
  * One email, isolated from its siblings — if notifyOrderPlaced sends to
  * both a customer and a restaurant owner, one failing shouldn't stop the
- * other from going out. Quietly no-ops if Brevo isn't configured (Brevo
- * being unconfigured is an expected dev-mode state, not a bug worth a log
- * line every time).
+ * other from going out. No-ops here if Brevo isn't configured rather
+ * than logging a second time at this layer — sendEmail() itself already
+ * logs that case clearly (see its "send ABORTED" log line), so this
+ * isn't actually silent anymore, just not redundant.
  */
 async function safeSend(to: string, subject: string, html: string, context: string) {
   try {
-    await sendEmail(to, subject, wrap(html));
+    await sendEmail(to, subject, wrap(html), context);
   } catch (err) {
     if (err instanceof EmailNotConfiguredError) return;
     console.error(`[notifications] "${context}" to ${to} failed:`, err);

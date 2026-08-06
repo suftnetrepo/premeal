@@ -12,7 +12,7 @@ export type SendParams = {
 
 export type SendResult =
   | { success: true; messageId: string | undefined }
-  | { success: false; error: string; retryCount: number };
+  | { success: false; error: string; status: number | undefined; retryCount: number };
 
 type BrevoEmailSenderOptions = {
   maxRetries?: number;
@@ -93,11 +93,44 @@ export class BrevoEmailSender {
     return false;
   }
 
+  /**
+   * The Brevo SDK throws an object with `.status` set directly (not
+   * nested under `.response.status`) — shouldRetry() above already
+   * relies on that same shape. Checked both locations anyway, since a
+   * thrown network-level error (not from Brevo's API itself) may only
+   * carry `.response.status` instead.
+   */
+  private extractStatus(err: unknown): number | undefined {
+    const e = err as { status?: number; response?: { status?: number } };
+    return e?.status ?? e?.response?.status;
+  }
+
+  /**
+   * Brevo's own 4xx error bodies carry a real `{code, message}` (e.g.
+   * "invalid_parameter: sender is not valid") that's far more useful for
+   * diagnosing a real failure than the generic Error#message the SDK
+   * sometimes wraps it in — pulled out here so both the retry-warning and
+   * the final failure log show the actual reason Brevo rejected the send,
+   * not just "Request failed with status code 401".
+   */
+  private extractBrevoMessage(err: unknown): string {
+    const e = err as {
+      message?: string;
+      body?: { message?: string; code?: string };
+      response?: { body?: { message?: string; code?: string } };
+    };
+    const body = e?.body ?? e?.response?.body;
+    if (body?.message) return body.code ? `${body.code}: ${body.message}` : body.message;
+    return e?.message ?? "Unknown error";
+  }
+
   async sendEmail(params: SendParams, retryCount = 0): Promise<SendResult> {
     const validationErrors = this.validateParams(params);
     if (validationErrors.length > 0) {
       throw new Error(`Validation failed: ${validationErrors.join(", ")}`);
     }
+
+    const recipients = params.to.map((r) => r.email).join(",");
 
     try {
       const email = new SendSmtpEmail();
@@ -107,25 +140,36 @@ export class BrevoEmailSender {
       email.htmlContent = params.htmlContent;
       email.textContent = params.textContent;
 
+      // The actual Brevo API call.
       const result = await this.api.sendTransacEmail(email);
+
+      if (this.options.logErrors) {
+        console.log(
+          `[brevo] API call succeeded — to=${recipients} subject="${params.subject}" messageId=${result.body.messageId ?? "n/a"}`
+        );
+      }
       return { success: true, messageId: result.body.messageId };
     } catch (err) {
+      const status = this.extractStatus(err);
+      const message = this.extractBrevoMessage(err);
+
       if (this.shouldRetry(err) && retryCount < this.options.maxRetries) {
         if (this.options.logErrors) {
           console.warn(
-            `[brevo] Send failed (attempt ${retryCount + 1}/${this.options.maxRetries}), retrying...`,
-            err
+            `[brevo] API call failed (attempt ${retryCount + 1}/${this.options.maxRetries}) — ` +
+              `to=${recipients} subject="${params.subject}" status=${status ?? "n/a"} error="${message}" — retrying...`
           );
         }
         await this.sleep(this.options.retryDelay * (retryCount + 1));
         return this.sendEmail(params, retryCount + 1);
       }
 
-      const message = err instanceof Error ? err.message : "Unknown error";
       if (this.options.logErrors) {
-        console.error("[brevo] Final send failure:", err);
+        console.error(
+          `[brevo] API call FAILED (final) — to=${recipients} subject="${params.subject}" status=${status ?? "n/a"} error="${message}"`
+        );
       }
-      return { success: false, error: message, retryCount };
+      return { success: false, error: message, status, retryCount };
     }
   }
 }
