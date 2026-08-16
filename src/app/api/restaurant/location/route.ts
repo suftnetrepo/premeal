@@ -37,6 +37,15 @@ export async function GET() {
     description,
     phone,
     contactEmail,
+    // Read-only here — the hygiene certificate section on this same
+    // settings page has its own dedicated submit endpoint
+    // (POST /api/restaurant/hygiene-certificate), same split as the
+    // restaurant photo above (also read here, written elsewhere).
+    hygieneCertificateLevel,
+    hygieneCertificateDocumentUrl,
+    hygieneCertificateStatus,
+    hygieneCertificateSubmittedAt,
+    hygieneCertificateRejectionReason,
   } = result.restaurant;
   return NextResponse.json({
     name,
@@ -50,6 +59,11 @@ export async function GET() {
     description,
     phone,
     contactEmail,
+    hygieneCertificateLevel,
+    hygieneCertificateDocumentUrl,
+    hygieneCertificateStatus,
+    hygieneCertificateSubmittedAt,
+    hygieneCertificateRejectionReason,
   });
 }
 

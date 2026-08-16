@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Store,
+  Award,
   ShoppingBag,
   CalendarDays,
   CalendarRange,
@@ -28,7 +29,7 @@ export default async function AdminOverviewPage() {
       <h1 className="text-3xl font-black tracking-tight text-stone-900 mb-1">Admin overview</h1>
       <p className="text-stone-500 mb-8">Platform-wide activity at a glance.</p>
 
-      {(stats.pendingApprovals > 0 || stats.openDisputes > 0) && (
+      {(stats.pendingApprovals > 0 || stats.openDisputes > 0 || stats.pendingCertificates > 0) && (
         <div className="flex flex-col gap-2 mb-8">
           {stats.pendingApprovals > 0 && (
             <Link
@@ -40,6 +41,24 @@ export default async function AdminOverviewPage() {
               </span>
               <p className="text-sm text-amber-800 flex-1">
                 {stats.pendingApprovals} restaurant{stats.pendingApprovals === 1 ? "" : "s"} waiting for approval
+              </p>
+              <span className="text-sm text-amber-700 font-medium shrink-0">Review →</span>
+            </Link>
+          )}
+          {/* Its own banner, not folded into the approval one above — a
+              hygiene certificate can come in from a restaurant that's
+              been live and approved for months, so "waiting for
+              approval" wouldn't even be an accurate way to describe it. */}
+          {stats.pendingCertificates > 0 && (
+            <Link
+              href="/admin/hygiene-certificates?status=PENDING"
+              className="flex items-center gap-3 border border-amber-200 bg-amber-50 rounded-2xl p-4 hover:bg-amber-100/60 transition-colors"
+            >
+              <span className="w-9 h-9 rounded-full bg-white text-amber-600 flex items-center justify-center shrink-0">
+                <Award size={18} strokeWidth={1.75} />
+              </span>
+              <p className="text-sm text-amber-800 flex-1">
+                {stats.pendingCertificates} hygiene certificate{stats.pendingCertificates === 1 ? "" : "s"} awaiting review
               </p>
               <span className="text-sm text-amber-700 font-medium shrink-0">Review →</span>
             </Link>
@@ -110,6 +129,12 @@ export default async function AdminOverviewPage() {
           className="text-orange-600 font-medium border border-orange-200 bg-orange-50 rounded-full px-4 py-2 hover:bg-orange-100 transition-colors"
         >
           Manage disputes
+        </Link>
+        <Link
+          href="/admin/hygiene-certificates"
+          className="text-orange-600 font-medium border border-orange-200 bg-orange-50 rounded-full px-4 py-2 hover:bg-orange-100 transition-colors"
+        >
+          Manage certificates
         </Link>
       </div>
     </main>

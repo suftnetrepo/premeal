@@ -306,6 +306,54 @@ export async function notifyRestaurantRejected(restaurantId: string): Promise<vo
   }
 }
 
+export async function notifyHygieneCertificateVerified(restaurantId: string): Promise<void> {
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      include: { owner: true },
+    });
+    if (!restaurant) return;
+
+    await safeSend(
+      restaurant.owner.email,
+      "Your food hygiene certificate is verified",
+      `<p>Hi ${restaurant.owner.name},</p>
+       <p>Your food hygiene certificate for <strong>${restaurant.name}</strong> has been verified — the
+       badge is now showing on your restaurant's page for customers to see.</p>`,
+      "hygiene certificate verified"
+    );
+  } catch (err) {
+    console.error(`[notifications] notifyHygieneCertificateVerified failed for restaurant ${restaurantId}:`, err);
+  }
+}
+
+export async function notifyHygieneCertificateRejected(restaurantId: string): Promise<void> {
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      include: { owner: true },
+    });
+    if (!restaurant) return;
+
+    await safeSend(
+      restaurant.owner.email,
+      "Your food hygiene certificate wasn't verified",
+      `<p>Hi ${restaurant.owner.name},</p>
+       <p>The food hygiene certificate you submitted for <strong>${restaurant.name}</strong> wasn't
+       verified.${
+         restaurant.hygieneCertificateRejectionReason
+           ? ` Reason given: ${restaurant.hygieneCertificateRejectionReason}`
+           : ""
+       }</p>
+       <p>This doesn't affect your restaurant's live status — it's optional. You can fix the issue and
+       resubmit any time from your restaurant settings.</p>`,
+      "hygiene certificate rejected"
+    );
+  } catch (err) {
+    console.error(`[notifications] notifyHygieneCertificateRejected failed for restaurant ${restaurantId}:`, err);
+  }
+}
+
 /** Admin resolved a "report a problem" dispute — let both sides know the outcome. */
 export async function notifyDisputeResolved(orderId: string): Promise<void> {
   try {

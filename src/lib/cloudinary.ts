@@ -100,19 +100,17 @@ export async function uploadRestaurantProfileImage(file: File): Promise<Cloudina
 }
 
 /**
- * Uploads a restaurant's local-authority food business registration
- * confirmation — a PDF or a photo of the confirmation, either is fine.
- * No transformation (unlike the two photo uploads above): this is a
- * legal document, not a display image, so it's stored exactly as
- * submitted rather than resized/cropped. `resource_type: "auto"` lets
- * Cloudinary classify it correctly whether it's actually an image or a
- * PDF — verified directly (see the upload-then-delete lifecycle test
- * for this feature) that a PDF uploaded this way still comes back as
- * Cloudinary's "image" resource type, the same type
- * deleteCloudinaryImage() already assumes, so no separate resource_type
- * bookkeeping is needed to delete it later.
+ * Shared by every "PDF-or-image document" upload (as opposed to the
+ * display-photo uploads above, which each have their own crop/resize
+ * transformation). No transformation here: these are real documents, so
+ * they're stored exactly as submitted. `resource_type: "auto"` lets
+ * Cloudinary classify each one correctly whether it's actually an image
+ * or a PDF — verified directly (real upload-then-delete test) that a
+ * PDF uploaded this way still comes back as Cloudinary's "image"
+ * resource type, the same type deleteCloudinaryImage() already assumes,
+ * so no separate resource_type bookkeeping is needed to delete it later.
  */
-export async function uploadFoodSafetyDocument(file: File): Promise<CloudinaryUploadResult> {
+async function uploadDocument(file: File, folder: string): Promise<CloudinaryUploadResult> {
   ensureConfigured();
 
   if (!FOOD_SAFETY_ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -127,11 +125,35 @@ export async function uploadFoodSafetyDocument(file: File): Promise<CloudinaryUp
   const dataUri = `data:${file.type};base64,${base64}`;
 
   const result = await cloudinary.uploader.upload(dataUri, {
-    folder: "premeal/food-safety-documents",
+    folder,
     resource_type: "auto",
   });
 
   return { url: result.secure_url, publicId: result.public_id };
+}
+
+/**
+ * Uploads a restaurant's local-authority food business registration
+ * confirmation — a PDF or a photo of the confirmation, either is fine.
+ * Mandatory, private (see /restaurant/food-safety) — not to be confused
+ * with uploadHygieneCertificateDocument below, which is optional and
+ * customer-visible once verified.
+ */
+export async function uploadFoodSafetyDocument(file: File): Promise<CloudinaryUploadResult> {
+  return uploadDocument(file, "premeal/food-safety-documents");
+}
+
+/**
+ * Uploads a restaurant's food hygiene rating certificate (or proof of
+ * one) — optional, customer-visible once admin verifies it (see
+ * /restaurant/location and /admin/hygiene-certificates). Same validation
+ * and Cloudinary handling as uploadFoodSafetyDocument, just a separate
+ * folder — kept as its own named export (a thin wrapper, not the same
+ * function reused directly) so each asset type stays easy to find in
+ * Cloudinary by folder, matching every other upload function here.
+ */
+export async function uploadHygieneCertificateDocument(file: File): Promise<CloudinaryUploadResult> {
+  return uploadDocument(file, "premeal/hygiene-certificates");
 }
 
 /**

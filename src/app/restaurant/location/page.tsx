@@ -4,7 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { kmToMiles, milesToKm } from "@/lib/geo";
 import { AddressAutocomplete } from "@/app/components/address-autocomplete";
 import { ProfileImageUpload } from "./profile-image-upload";
+import { HygieneCertificateSection } from "./hygiene-certificate-section";
 import { Settings } from "lucide-react";
+
+type HygieneLevel = "LEVEL_1" | "LEVEL_2" | "LEVEL_3" | "LEVEL_4";
+type HygieneStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
 export default function RestaurantSettingsPage() {
   const [name, setName] = useState("");
@@ -20,6 +24,12 @@ export default function RestaurantSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [hygieneLoaded, setHygieneLoaded] = useState(false);
+  const [hygieneLevel, setHygieneLevel] = useState<HygieneLevel | null>(null);
+  const [hygieneDocumentUrl, setHygieneDocumentUrl] = useState<string | null>(null);
+  const [hygieneStatus, setHygieneStatus] = useState<HygieneStatus | null>(null);
+  const [hygieneSubmittedAt, setHygieneSubmittedAt] = useState<string | null>(null);
+  const [hygieneRejectionReason, setHygieneRejectionReason] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/restaurant/location");
@@ -37,6 +47,12 @@ export default function RestaurantSettingsPage() {
       setDescription(data.description ?? "");
       setPhone(data.phone ?? "");
       setContactEmail(data.contactEmail ?? "");
+      setHygieneLevel(data.hygieneCertificateLevel ?? null);
+      setHygieneDocumentUrl(data.hygieneCertificateDocumentUrl ?? null);
+      setHygieneStatus(data.hygieneCertificateStatus ?? null);
+      setHygieneSubmittedAt(data.hygieneCertificateSubmittedAt ?? null);
+      setHygieneRejectionReason(data.hygieneCertificateRejectionReason ?? null);
+      setHygieneLoaded(true);
     }
   }, []);
 
@@ -228,6 +244,24 @@ export default function RestaurantSettingsPage() {
         >
           {saving ? "Saving…" : "Save settings"}
         </button>
+
+        {/* Deliberately its own section with its own submit action, not
+            part of the "Save settings" form above — this is optional and
+            has nothing to do with the required fields that button saves,
+            same reasoning as ProfileImageUpload above having its own
+            upload button. Only rendered once the real current state has
+            loaded, so it can't flash a false "never submitted" state for
+            a restaurant that actually has one on file. */}
+        {hygieneLoaded && (
+          <HygieneCertificateSection
+            key={hygieneStatus ?? "none"}
+            initialLevel={hygieneLevel}
+            initialDocumentUrl={hygieneDocumentUrl}
+            initialStatus={hygieneStatus}
+            initialSubmittedAt={hygieneSubmittedAt}
+            initialRejectionReason={hygieneRejectionReason}
+          />
+        )}
       </div>
     </main>
   );

@@ -25,6 +25,25 @@ enum RestaurantApprovalStatus {
   REJECTED
 }
 
+// UK's real food hygiene rating scheme levels, in the order training is
+// actually taken — Level 1 is introductory, Level 2 is what most food
+// handlers take, Level 3 is supervisory, Level 4 is managerial.
+enum HygieneCertificateLevel {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+  LEVEL_4
+}
+
+// No "never submitted" member on purpose — see the doc comment on
+// Restaurant.hygieneCertificateStatus for why that's a null field
+// instead of a 4th value here.
+enum HygieneCertificateStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 // A driver can work for more than one restaurant (many-to-many, via this
 // model), and a restaurant only ever sees/assigns from drivers that have
 // actually accepted an association with THEM specifically — never a
@@ -190,6 +209,40 @@ model Restaurant {
   foodSafetyDocumentUrl      String?
   foodSafetyDocumentPublicId String?
   foodSafetyAcknowledgedAt   DateTime?
+
+  // Optional, customer-visible hygiene certificate — a trust signal, not
+  // an approval gate (contrast with the mandatory, private foodSafety*
+  // fields above: that blocks approveRestaurant(), this never does).
+  // Can be submitted at any point in a restaurant's life, not just at
+  // onboarding — see /restaurant/location (settings) and the dedicated
+  // admin queue at /admin/hygiene-certificates.
+  //
+  // hygieneCertificateStatus is deliberately nullable rather than a 4th
+  // "NOT_SUBMITTED" enum member: every other "hasn't happened yet"
+  // concept in this schema is a null field (signupFeePaidAt,
+  // stripeAccountId, foodSafetyAcknowledgedAt above), not a sentinel
+  // enum value, and keeping that convention means the admin queue is
+  // just `where: { hygieneCertificateStatus: "PENDING" }` — "never
+  // submitted" is naturally excluded rather than needing to be filtered
+  // out. The 3 real enum values (PENDING/VERIFIED/REJECTED) still get
+  // proper type-safety, matching how RestaurantApprovalStatus is used
+  // above — just without forcing a value to exist before anyone's
+  // touched this feature.
+  //
+  // Every submission (first-time or resubmission, regardless of prior
+  // state) resets status to PENDING and clears verifiedAt — see
+  // POST /api/restaurant/hygiene-certificate. That's what makes "only
+  // ever shown once genuinely verified" hold even when a previously-
+  // verified restaurant uploads an update: the customer-facing badge
+  // reads hygieneCertificateStatus directly, so it disappears the
+  // moment a resubmission puts that back to PENDING, until re-verified.
+  hygieneCertificateLevel            HygieneCertificateLevel?
+  hygieneCertificateDocumentUrl      String?
+  hygieneCertificateDocumentPublicId String?
+  hygieneCertificateStatus           HygieneCertificateStatus?
+  hygieneCertificateSubmittedAt      DateTime?
+  hygieneCertificateVerifiedAt       DateTime?
+  hygieneCertificateRejectionReason  String? // admin's reason, shown to the owner if rejected
 
   // One-time flat signup fee — not recurring, unrelated to sales volume.
   // Charged via Stripe Checkout in one-time "payment" mode (see

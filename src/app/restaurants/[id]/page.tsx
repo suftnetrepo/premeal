@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Award } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatMoney, formatDate } from "@/lib/format";
 import { OrderForm } from "./order-form";
 import { StarDisplay } from "@/app/components/stars";
+import { hygieneCertificateBadgeText } from "@/lib/hygiene-certificate";
 
 export const dynamic = "force-dynamic"; // capacity must always be fresh, never cached
 
@@ -121,6 +122,16 @@ export default async function RestaurantPage({
           <p className="text-stone-500 text-sm mt-2">
             {restaurant.cuisine} · Min {formatMoney(restaurant.minOrderCents)} · Delivery {formatMoney(restaurant.deliveryFeeCents)}
           </p>
+          {/* Only ever rendered for a genuinely VERIFIED certificate —
+              nothing shows for pending, rejected, or never-submitted, on
+              purpose. No partial-credit display: a claimed-but-unverified
+              level is not a trust signal, so it isn't one here either. */}
+          {restaurant.hygieneCertificateStatus === "VERIFIED" && restaurant.hygieneCertificateLevel && (
+            <span className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
+              <Award size={13} strokeWidth={1.75} />
+              {hygieneCertificateBadgeText(restaurant.hygieneCertificateLevel)}
+            </span>
+          )}
           {/* The full description now lives in OrderForm's sidebar
               instead of here — shown alongside phone/email so it reads
               as one coherent "about this restaurant" section next to

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Gauge, Store, Scale, Tag, Megaphone, SlidersHorizontal, LogOut } from "lucide-react";
+import { Gauge, Store, Award, Scale, Tag, Megaphone, SlidersHorizontal, LogOut } from "lucide-react";
 
 const ITEMS = [
   { href: "/admin", label: "Overview", icon: Gauge },
   { href: "/admin/restaurants", label: "Restaurants", icon: Store },
+  { href: "/admin/hygiene-certificates", label: "Certificates", icon: Award },
   { href: "/admin/disputes", label: "Disputes", icon: Scale },
   { href: "/admin/promotions", label: "Promotions", icon: Tag },
   { href: "/admin/broadcast", label: "Broadcast", icon: Megaphone },

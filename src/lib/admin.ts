@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/db";
 import { refundOrder, RefundFailedError } from "@/lib/payments";
-import { notifyRestaurantApproved, notifyRestaurantRejected, notifyDisputeResolved } from "@/lib/notifications";
+import {
+  notifyRestaurantApproved,
+  notifyRestaurantRejected,
+  notifyDisputeResolved,
+  notifyHygieneCertificateVerified,
+  notifyHygieneCertificateRejected,
+} from "@/lib/notifications";
 
 export class NotFoundError extends Error {
   constructor(message = "Not found") {
@@ -20,6 +26,13 @@ export class FoodSafetyIncompleteError extends Error {
   constructor(message = "This restaurant hasn't completed food safety compliance yet.") {
     super(message);
     this.name = "FoodSafetyIncompleteError";
+  }
+}
+
+export class HygieneCertificateNotPendingError extends Error {
+  constructor(message = "This certificate isn't awaiting review — it may have already been decided, or never submitted.") {
+    super(message);
+    this.name = "HygieneCertificateNotPendingError";
   }
 }
 
@@ -53,6 +66,48 @@ export async function rejectRestaurant(restaurantId: string, note: string) {
     data: { approvalStatus: "REJECTED", approvalNote: note },
   });
   void notifyRestaurantRejected(restaurantId);
+  return updated;
+}
+
+/**
+ * The hygiene certificate queue, unlike restaurant approval, isn't scoped
+ * to new signups — a restaurant can submit one at any point in its life,
+ * long after being approved and live. verify/reject both guard on the
+ * certificate actually being PENDING right now: there's nothing
+ * meaningful to decide on one that was never submitted (status null) or
+ * one whose current submission has already been decided.
+ */
+export async function verifyHygieneCertificate(restaurantId: string) {
+  const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
+  if (!restaurant) throw new NotFoundError("Restaurant not found");
+  if (restaurant.hygieneCertificateStatus !== "PENDING") throw new HygieneCertificateNotPendingError();
+
+  const updated = await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: {
+      hygieneCertificateStatus: "VERIFIED",
+      hygieneCertificateVerifiedAt: new Date(),
+      hygieneCertificateRejectionReason: null,
+    },
+  });
+  void notifyHygieneCertificateVerified(restaurantId);
+  return updated;
+}
+
+export async function rejectHygieneCertificate(restaurantId: string, reason: string) {
+  const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
+  if (!restaurant) throw new NotFoundError("Restaurant not found");
+  if (restaurant.hygieneCertificateStatus !== "PENDING") throw new HygieneCertificateNotPendingError();
+
+  const updated = await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: {
+      hygieneCertificateStatus: "REJECTED",
+      hygieneCertificateVerifiedAt: null,
+      hygieneCertificateRejectionReason: reason,
+    },
+  });
+  void notifyHygieneCertificateRejected(restaurantId);
   return updated;
 }
 
@@ -118,6 +173,7 @@ export async function getOverviewStats() {
     ordersThisMonth,
     pendingApprovals,
     openDisputes,
+    pendingCertificates,
     revenueAgg,
     signupFeeAgg,
     topRestaurants,
@@ -127,6 +183,7 @@ export async function getOverviewStats() {
     prisma.order.count({ where: { createdAt: { gte: startOfMonth } } }),
     prisma.restaurant.count({ where: { approvalStatus: "PENDING" } }),
     prisma.order.count({ where: { disputedAt: { not: null }, disputeResolvedAt: null } }),
+    prisma.restaurant.count({ where: { hygieneCertificateStatus: "PENDING" } }),
     prisma.order.aggregate({
       where: { status: "DELIVERED", platformFeeCents: { not: null } },
       _sum: { platformFeeCents: true },
@@ -157,6 +214,7 @@ export async function getOverviewStats() {
     ordersThisMonth,
     pendingApprovals,
     openDisputes,
+    pendingCertificates,
     platformRevenueCents: revenueAgg._sum.platformFeeCents ?? 0,
     signupFeeRevenueCents: signupFeeAgg._sum.signupFeeCents ?? 0,
     topRestaurants: topRestaurants.map((t) => ({
