@@ -11,6 +11,7 @@ import {
   Settings,
   Wallet,
   Truck,
+  ShieldCheck,
   LogOut,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ const ITEMS = [
   { href: "/restaurant/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/restaurant/deliveries", label: "Deliveries", icon: CalendarDays },
   { href: "/restaurant/drivers", label: "Drivers", icon: Truck },
+  { href: "/restaurant/food-safety", label: "Food safety", icon: ShieldCheck },
   { href: "/restaurant/location", label: "Settings", icon: Settings },
   { href: "/restaurant/payouts", label: "Payouts", icon: Wallet },
 ];

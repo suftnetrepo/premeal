@@ -24,6 +24,10 @@ function ensureConfigured() {
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+// Food safety documents specifically: everything menu/profile photos
+// accept, plus PDF — a local-authority registration confirmation is just
+// as likely to be a scanned PDF as a phone photo.
+const FOOD_SAFETY_ALLOWED_MIME_TYPES = [...ALLOWED_MIME_TYPES, "application/pdf"];
 
 export class InvalidUploadError extends Error {
   constructor(message: string) {
@@ -90,6 +94,41 @@ export async function uploadRestaurantProfileImage(file: File): Promise<Cloudina
   const result = await cloudinary.uploader.upload(dataUri, {
     folder: "premeal/restaurant-profiles",
     transformation: [{ width: 800, height: 450, crop: "fill", gravity: "auto", quality: "auto" }],
+  });
+
+  return { url: result.secure_url, publicId: result.public_id };
+}
+
+/**
+ * Uploads a restaurant's local-authority food business registration
+ * confirmation — a PDF or a photo of the confirmation, either is fine.
+ * No transformation (unlike the two photo uploads above): this is a
+ * legal document, not a display image, so it's stored exactly as
+ * submitted rather than resized/cropped. `resource_type: "auto"` lets
+ * Cloudinary classify it correctly whether it's actually an image or a
+ * PDF — verified directly (see the upload-then-delete lifecycle test
+ * for this feature) that a PDF uploaded this way still comes back as
+ * Cloudinary's "image" resource type, the same type
+ * deleteCloudinaryImage() already assumes, so no separate resource_type
+ * bookkeeping is needed to delete it later.
+ */
+export async function uploadFoodSafetyDocument(file: File): Promise<CloudinaryUploadResult> {
+  ensureConfigured();
+
+  if (!FOOD_SAFETY_ALLOWED_MIME_TYPES.includes(file.type)) {
+    throw new InvalidUploadError("Only a PDF, JPEG, PNG, WebP, or GIF is allowed.");
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new InvalidUploadError("File is too large — max 5MB.");
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  const dataUri = `data:${file.type};base64,${base64}`;
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: "premeal/food-safety-documents",
+    resource_type: "auto",
   });
 
   return { url: result.secure_url, publicId: result.public_id };

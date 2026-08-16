@@ -178,6 +178,19 @@ model Restaurant {
   approvalStatus RestaurantApprovalStatus @default(PENDING)
   approvalNote   String? // admin's reason, shown to the owner if rejected
 
+  // Food safety compliance — mandatory before a restaurant can actually be
+  // approved (see approveRestaurant() in src/lib/admin.ts, which blocks on
+  // both of these being set). foodSafetyDocumentPublicId follows the exact
+  // same Cloudinary lifecycle pattern as cloudinaryPublicId above: only
+  // ever populated from a real upload response, never guessed from the
+  // URL, and is what makes the old document deletable when a new one
+  // replaces it. foodSafetyAcknowledgedAt is the owner's timestamped
+  // confirmation of the checkbox at /restaurant/food-safety — both fields
+  // are always written together in one submission, never independently.
+  foodSafetyDocumentUrl      String?
+  foodSafetyDocumentPublicId String?
+  foodSafetyAcknowledgedAt   DateTime?
+
   // One-time flat signup fee — not recurring, unrelated to sales volume.
   // Charged via Stripe Checkout in one-time "payment" mode (see
   // src/lib/restaurant-fees.ts), required alongside menu/delivery setup

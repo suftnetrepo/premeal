@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Store } from "lucide-react";
+import { Store, ShieldCheck, ShieldAlert, FileText } from "lucide-react";
 
 type Restaurant = {
   id: string;
@@ -10,6 +10,8 @@ type Restaurant = {
   approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
   approvalNote: string | null;
   signupFeePaidAt: string | null;
+  foodSafetyDocumentUrl: string | null;
+  foodSafetyAcknowledgedAt: string | null;
   owner: { name: string; email: string };
   _count: { menuItems: number; deliverySlots: number };
 };
@@ -37,7 +39,19 @@ export default function AdminRestaurantsPage() {
 
   async function approve(id: string) {
     setBusyId(id);
-    await fetch(`/api/admin/restaurants/${id}/approve`, { method: "POST" });
+    setError(null);
+    const res = await fetch(`/api/admin/restaurants/${id}/approve`, { method: "POST" });
+    if (!res.ok) {
+      // Previously silent — a blocked approve (e.g. food safety
+      // incomplete) would just no-op with zero indication why. The
+      // Approve button is already disabled for that specific case below,
+      // but this is the real enforcement; surfacing it here covers any
+      // other reason the server-side check might reject it too.
+      const data = await res.json().catch(() => ({}));
+      setError(typeof data.error === "string" ? data.error : "Could not approve");
+      setBusyId(null);
+      return;
+    }
     setBusyId(null);
     await refresh();
   }
@@ -119,28 +133,82 @@ export default function AdminRestaurantsPage() {
                 <span className="text-amber-700">signup fee unpaid</span>
               )}
             </p>
+
+            {/* Deliberately its own block, above the approve/reject
+                buttons rather than folded into the summary line above —
+                this is the one thing that has to be checked before a
+                decision, not just background context. */}
+            <div
+              className={`flex items-start gap-2 rounded-lg p-3 mb-3 text-xs ${
+                r.foodSafetyDocumentUrl && r.foodSafetyAcknowledgedAt
+                  ? "bg-green-50 text-green-800"
+                  : "bg-red-50 text-red-800"
+              }`}
+            >
+              {r.foodSafetyDocumentUrl && r.foodSafetyAcknowledgedAt ? (
+                <ShieldCheck size={14} className="shrink-0 mt-0.5" strokeWidth={1.75} />
+              ) : (
+                <ShieldAlert size={14} className="shrink-0 mt-0.5" strokeWidth={1.75} />
+              )}
+              <div>
+                {r.foodSafetyAcknowledgedAt ? (
+                  <p>
+                    Confirmed{" "}
+                    {new Date(r.foodSafetyAcknowledgedAt).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                ) : (
+                  <p>Checkbox not confirmed yet</p>
+                )}
+                {r.foodSafetyDocumentUrl ? (
+                  <a
+                    href={r.foodSafetyDocumentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 underline"
+                  >
+                    <FileText size={12} strokeWidth={1.75} />
+                    View food safety document
+                  </a>
+                ) : (
+                  <p>No document uploaded yet</p>
+                )}
+              </div>
+            </div>
+
             {r.approvalNote && r.approvalStatus === "REJECTED" && (
               <p className="text-xs text-red-600 mb-3">Rejected: {r.approvalNote}</p>
             )}
 
             {r.approvalStatus !== "APPROVED" && rejectingId !== r.id && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => approve(r.id)}
-                  disabled={busyId === r.id}
-                  className="text-xs bg-orange-600 disabled:bg-stone-300 text-white rounded-xl px-3 py-1.5"
-                >
-                  Approve
-                </button>
-                <button
-                  onClick={() => {
-                    setRejectingId(r.id);
-                    setError(null);
-                  }}
-                  className="text-xs border border-red-200 text-red-600 rounded-xl px-3 py-1.5"
-                >
-                  Reject
-                </button>
+              <div className="flex flex-col gap-2 items-start">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => approve(r.id)}
+                    disabled={busyId === r.id || !r.foodSafetyDocumentUrl || !r.foodSafetyAcknowledgedAt}
+                    title={
+                      !r.foodSafetyDocumentUrl || !r.foodSafetyAcknowledgedAt
+                        ? "Can't approve until food safety compliance is complete"
+                        : undefined
+                    }
+                    className="text-xs bg-orange-600 disabled:bg-stone-300 text-white rounded-xl px-3 py-1.5"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRejectingId(r.id);
+                      setError(null);
+                    }}
+                    className="text-xs border border-red-200 text-red-600 rounded-xl px-3 py-1.5"
+                  >
+                    Reject
+                  </button>
+                </div>
+                {error && <p className="text-xs text-red-600">{error}</p>}
               </div>
             )}
 

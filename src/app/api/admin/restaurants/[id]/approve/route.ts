@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, isFailure } from "@/lib/admin-auth";
-import { approveRestaurant, NotFoundError } from "@/lib/admin";
+import { approveRestaurant, NotFoundError, FoodSafetyIncompleteError } from "@/lib/admin";
 import { unexpectedErrorResponse } from "@/lib/api-errors";
 
 export async function POST(
@@ -17,6 +17,9 @@ export async function POST(
   } catch (err) {
     if (err instanceof NotFoundError) {
       return NextResponse.json({ error: err.message }, { status: 404 });
+    }
+    if (err instanceof FoodSafetyIncompleteError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
     }
     return unexpectedErrorResponse(err, "Could not approve restaurant");
   }

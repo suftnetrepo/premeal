@@ -87,6 +87,14 @@ export default async function RestaurantDashboardPage({
       href: "/restaurant/payouts",
     },
     {
+      done: Boolean(restaurant.foodSafetyAcknowledgedAt && restaurant.foodSafetyDocumentUrl),
+      label: "Food safety compliance",
+      detail: restaurant.foodSafetyAcknowledgedAt && restaurant.foodSafetyDocumentUrl
+        ? null
+        : "Local authority registration + a real document — mandatory, checked before approval",
+      href: "/restaurant/food-safety",
+    },
+    {
       done: isApproved,
       label: "Get approved by Pre-Meal",
       detail: isApproved ? null : "We review new restaurants before they go live",

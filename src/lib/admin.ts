@@ -16,9 +16,25 @@ export class AlreadyResolvedError extends Error {
   }
 }
 
+export class FoodSafetyIncompleteError extends Error {
+  constructor(message = "This restaurant hasn't completed food safety compliance yet.") {
+    super(message);
+    this.name = "FoodSafetyIncompleteError";
+  }
+}
+
 export async function approveRestaurant(restaurantId: string) {
   const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
   if (!restaurant) throw new NotFoundError("Restaurant not found");
+
+  // Mandatory, no exceptions — a restaurant can't be approved without both
+  // the local-authority registration document and the acknowledged legal
+  // checkbox on file. Both are always written together (see
+  // POST /api/restaurant/food-safety), so checking both here is
+  // belt-and-suspenders against the one, not a real independent gate.
+  if (!restaurant.foodSafetyAcknowledgedAt || !restaurant.foodSafetyDocumentUrl) {
+    throw new FoodSafetyIncompleteError();
+  }
 
   const updated = await prisma.restaurant.update({
     where: { id: restaurantId },
