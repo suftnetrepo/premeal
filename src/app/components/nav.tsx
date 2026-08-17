@@ -59,7 +59,7 @@ export async function Nav() {
           </div>
         ) : (
           <div className="flex items-center gap-6">
-            <Link href="/#how-it-works" className="text-sm text-stone-600 hover:text-stone-900 transition-colors hidden sm:inline">
+            <Link href="/how-it-works" className="text-sm text-stone-600 hover:text-stone-900 transition-colors hidden sm:inline">
               How it works
             </Link>
             <Link href="/signup" className="text-sm text-stone-600 hover:text-stone-900 transition-colors hidden sm:inline">
