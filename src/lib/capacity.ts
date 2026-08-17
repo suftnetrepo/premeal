@@ -5,6 +5,7 @@ import { applyPromoCode } from "@/lib/promotions";
 import { notifyOrderPlaced, notifyOrderConfirmed, notifyOrderDeclined, notifyPaymentActionRequired, notifyOrderExpired } from "@/lib/notifications";
 import { geocodeAddress } from "@/lib/geocoding";
 import { distanceKm } from "@/lib/geo";
+import { earliestBookableSlotDate } from "@/lib/delivery-slots";
 
 /**
  * The capacity engine.
@@ -40,6 +41,23 @@ export class SlotClosedError extends Error {
   constructor() {
     super("The ordering cutoff for this slot has passed.");
     this.name = "SlotClosedError";
+  }
+}
+
+// Deliberately a separate class from SlotClosedError above, even though
+// both mean "this slot can't be booked" — same reasoning as
+// RestaurantPausedError being separate from RestaurantNotApprovedError.
+// cutoffAt is a property of the slot itself; minimumLeadTimeDays is a
+// restaurant-wide policy that a slot can violate independent of its own
+// cutoff (e.g. a slot 1 day out with a cutoff still hours away, at a
+// restaurant that requires 3 days' notice). Conflating the two in logs
+// would hide which constraint actually blocked the order.
+export class SlotLeadTimeError extends Error {
+  constructor(minimumLeadTimeDays: number) {
+    super(
+      `This restaurant requires at least ${minimumLeadTimeDays} day${minimumLeadTimeDays === 1 ? "" : "s"}' notice for orders.`
+    );
+    this.name = "SlotLeadTimeError";
   }
 }
 
@@ -191,6 +209,16 @@ export async function createOrder(input: CreateOrderInput) {
     }
 
     const slot = await tx.deliverySlot.findUniqueOrThrow({ where: { id: input.slotId } });
+
+    // Defense-in-depth, same pattern as the isActive/approvalStatus checks
+    // above — the slot-fetching layers already hide any slot that
+    // violates this, but that's display-only. A slotId reaching here
+    // didn't necessarily come through that filtering (a stale page, a
+    // direct API call), so it's re-verified against the real, current
+    // minimumLeadTimeDays right before the booking actually happens.
+    if (slot.date < earliestBookableSlotDate(restaurant.minimumLeadTimeDays)) {
+      throw new SlotLeadTimeError(restaurant.minimumLeadTimeDays);
+    }
 
     if (slot.cutoffAt < new Date()) {
       throw new SlotClosedError();

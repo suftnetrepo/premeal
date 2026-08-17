@@ -16,6 +16,10 @@ const schema = z.object({
   // £0 minimum order is a legitimate choice too (no minimum at all) —
   // same reasoning, the upper bound just catches an obvious typo.
   minOrderCents: z.number().int().min(0).max(10000),
+  // 0 is the default/legitimate "no extra notice required" choice — the
+  // upper bound (60) is just a sanity cap against a stray typo, not a
+  // real product limit.
+  minimumLeadTimeDays: z.number().int().min(0).max(60),
   description: z.string().max(500).nullable().optional(),
   phone: z.string().max(30).nullable().optional(),
   contactEmail: z.string().email().nullable().optional().or(z.literal("")),
@@ -33,6 +37,7 @@ export async function GET() {
     deliveryRadiusKm,
     deliveryFeeCents,
     minOrderCents,
+    minimumLeadTimeDays,
     imageUrl,
     description,
     phone,
@@ -55,6 +60,7 @@ export async function GET() {
     deliveryRadiusKm,
     deliveryFeeCents,
     minOrderCents,
+    minimumLeadTimeDays,
     imageUrl,
     description,
     phone,
@@ -99,6 +105,7 @@ export async function POST(request: Request) {
         deliveryRadiusKm: parsed.data.deliveryRadiusKm,
         deliveryFeeCents: parsed.data.deliveryFeeCents,
         minOrderCents: parsed.data.minOrderCents,
+        minimumLeadTimeDays: parsed.data.minimumLeadTimeDays,
         description: parsed.data.description || null,
         phone: parsed.data.phone || null,
         contactEmail: parsed.data.contactEmail || null,
@@ -113,6 +120,7 @@ export async function POST(request: Request) {
       deliveryRadiusKm: restaurant.deliveryRadiusKm,
       deliveryFeeCents: restaurant.deliveryFeeCents,
       minOrderCents: restaurant.minOrderCents,
+      minimumLeadTimeDays: restaurant.minimumLeadTimeDays,
       description: restaurant.description,
       phone: restaurant.phone,
       contactEmail: restaurant.contactEmail,

@@ -165,6 +165,23 @@ model Restaurant {
   // owner has to actively change this for their own price to move.
   deliveryFeeCents Int @default(300)
 
+  // Restaurant-wide minimum notice for orders — separate from, and
+  // enforced in addition to, each individual DeliverySlot's own
+  // cutoffAt. cutoffAt says "this specific slot stops taking orders at
+  // this instant" (e.g. 2pm the day of); minimumLeadTimeDays says "don't
+  // let a customer book ANY slot less than N days out at all," useful
+  // for a restaurant that needs a few days to source ingredients
+  // regardless of how the slot's own cutoff is set. A slot must satisfy
+  // both to be bookable — see getBookableSlots() in
+  // src/lib/delivery-slots.ts (display-layer filtering, hides the slot
+  // entirely rather than greying it out) and createOrder() in
+  // src/lib/capacity.ts (the real, server-side enforcement). Defaults to
+  // 0, meaning "no additional constraint beyond each slot's own
+  // cutoffAt" — matches every restaurant's behavior before this field
+  // existed, so adding it doesn't silently change anything until an
+  // owner actively sets it on /restaurant/location.
+  minimumLeadTimeDays Int @default(0)
+
   // Contact info shown to customers on the order page — set via
   // /restaurant/location (the restaurant settings page), separate from
   // the owner's own login email, since a restaurant might want a

@@ -83,6 +83,7 @@ export function OrderForm({
   categories,
   menuItems,
   slots,
+  minimumLeadTimeDays,
 }: {
   restaurantId: string;
   restaurantName: string;
@@ -92,6 +93,7 @@ export function OrderForm({
   categories: Category[];
   menuItems: MenuItem[];
   slots: Slot[];
+  minimumLeadTimeDays: number;
 }) {
   const router = useRouter();
   const [user, setUser] = useState<SessionUser | null | undefined>(undefined);
@@ -284,6 +286,18 @@ export function OrderForm({
       <div className="flex-1 min-w-0 flex flex-col gap-6">
         <section>
           <h2 className="text-sm font-semibold text-stone-900 mb-3">Choose a delivery slot</h2>
+          {/* Only shown when it's actually relevant — the slots below are
+              already filtered server-side to exclude anything that
+              violates this, so this note explains why a customer might
+              not see slots as soon as "tomorrow," rather than leaving
+              them to guess. Nothing shown at all for a restaurant with no
+              lead-time requirement (the default). */}
+          {minimumLeadTimeDays > 0 && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3">
+              This restaurant requires at least {minimumLeadTimeDays} day{minimumLeadTimeDays === 1 ? "" : "s"}&apos;
+              notice.
+            </p>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {slots.map((slot) => (
               <button

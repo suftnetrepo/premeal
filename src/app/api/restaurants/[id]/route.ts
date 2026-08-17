@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getBookableSlots } from "@/lib/delivery-slots";
 
 export async function GET(
   _request: Request,
@@ -49,16 +50,12 @@ export async function GET(
   }
 
   // Expose remaining spots + a simple traffic-light status, don't make the
-  // client re-derive capacity math.
-  const slots = restaurant.deliverySlots.map((slot) => {
-    const remaining = slot.capacity - slot.bookedCount;
-    const isPastCutoff = slot.cutoffAt < new Date();
-    return {
-      ...slot,
-      remaining,
-      status: isPastCutoff || remaining <= 0 ? "full" : remaining <= 5 ? "limited" : "available",
-    };
-  });
+  // client re-derive capacity math. Also drops any slot that violates
+  // this restaurant's own minimumLeadTimeDays — same shared helper as the
+  // web restaurant page, so the mobile app (the consumer of this route)
+  // gets the exact same filtering without needing its own copy of this
+  // logic. See src/lib/delivery-slots.ts.
+  const slots = getBookableSlots(restaurant.deliverySlots, restaurant.minimumLeadTimeDays);
 
   return NextResponse.json({ restaurant: { ...restaurant, deliverySlots: slots } });
 }

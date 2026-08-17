@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { OrderStatus } from "@prisma/client";
-import { createOrder, SlotFullError, SlotClosedError, InvalidModifierSelectionError, RestaurantNotApprovedError, RestaurantPausedError, DeliveryOutOfRangeError } from "@/lib/capacity";
+import { createOrder, SlotFullError, SlotClosedError, SlotLeadTimeError, InvalidModifierSelectionError, RestaurantNotApprovedError, RestaurantPausedError, DeliveryOutOfRangeError } from "@/lib/capacity";
 import { PromoCodeError } from "@/lib/promotions";
 import { getCurrentUser } from "@/lib/auth";
 import { unexpectedErrorResponse } from "@/lib/api-errors";
@@ -56,6 +56,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
     if (err instanceof SlotClosedError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    if (err instanceof SlotLeadTimeError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
     if (err instanceof InvalidModifierSelectionError) {

@@ -16,6 +16,7 @@ export default function RestaurantSettingsPage() {
   const [radius, setRadius] = useState("5");
   const [deliveryFee, setDeliveryFee] = useState("3.00");
   const [minOrder, setMinOrder] = useState("10.00");
+  const [minimumLeadTimeDays, setMinimumLeadTimeDays] = useState("0");
   const [description, setDescription] = useState("");
   const [phone, setPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -43,6 +44,7 @@ export default function RestaurantSettingsPage() {
       if (data.deliveryRadiusKm) setRadius(kmToMiles(data.deliveryRadiusKm).toFixed(1));
       if (typeof data.deliveryFeeCents === "number") setDeliveryFee((data.deliveryFeeCents / 100).toFixed(2));
       if (typeof data.minOrderCents === "number") setMinOrder((data.minOrderCents / 100).toFixed(2));
+      if (typeof data.minimumLeadTimeDays === "number") setMinimumLeadTimeDays(String(data.minimumLeadTimeDays));
       setImageUrl(data.imageUrl ?? null);
       setDescription(data.description ?? "");
       setPhone(data.phone ?? "");
@@ -74,6 +76,7 @@ export default function RestaurantSettingsPage() {
         deliveryRadiusKm: milesToKm(Number(radius)),
         deliveryFeeCents: Math.round(Number(deliveryFee) * 100),
         minOrderCents: Math.round(Number(minOrder) * 100),
+        minimumLeadTimeDays: Math.round(Number(minimumLeadTimeDays)),
         description: description.trim() || null,
         phone: phone.trim() || null,
         contactEmail: contactEmail.trim() || null,
@@ -177,6 +180,24 @@ export default function RestaurantSettingsPage() {
           <span className="block mt-1 text-[11px] text-stone-400">
             The smallest order a customer can place with you — checked against their subtotal, before
             delivery. £0 means no minimum.
+          </span>
+        </label>
+
+        <label className="text-xs text-stone-500">
+          Minimum notice required (days)
+          <input
+            type="number"
+            min={0}
+            max={60}
+            step={1}
+            value={minimumLeadTimeDays}
+            onChange={(e) => setMinimumLeadTimeDays(e.target.value)}
+            className="mt-1 w-32 border border-stone-200 rounded-xl p-2.5 text-sm"
+          />
+          <span className="block mt-1 text-[11px] text-stone-400">
+            Separate from each delivery slot&apos;s own cutoff time — this hides any slot dated sooner
+            than this from customers entirely. 0 means no extra notice needed beyond your normal slot
+            cutoffs.
           </span>
         </label>
 

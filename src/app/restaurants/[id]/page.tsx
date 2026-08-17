@@ -7,6 +7,7 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { OrderForm } from "./order-form";
 import { StarDisplay } from "@/app/components/stars";
 import { HygieneBadge } from "@/app/components/hygiene-badge";
+import { getBookableSlots } from "@/lib/delivery-slots";
 
 export const dynamic = "force-dynamic"; // capacity must always be fresh, never cached
 
@@ -69,13 +70,12 @@ export default async function RestaurantPage({
     take: 10,
   });
 
-  const slots = restaurant.deliverySlots.map((slot) => {
-    const remaining = slot.capacity - slot.bookedCount;
-    const isPastCutoff = slot.cutoffAt < new Date();
-    const status: "available" | "limited" | "full" =
-      isPastCutoff || remaining <= 0 ? "full" : remaining <= 5 ? "limited" : "available";
-    return { ...slot, remaining, status };
-  });
+  // Filters out any slot that violates the restaurant's own
+  // minimumLeadTimeDays (hidden entirely, not greyed out) on top of the
+  // existing "today or later" query above, and computes remaining/status
+  // from each slot's own cutoffAt — see src/lib/delivery-slots.ts for why
+  // these are two separate, both-must-pass checks.
+  const slots = getBookableSlots(restaurant.deliverySlots, restaurant.minimumLeadTimeDays);
 
   return (
     <main className="w-full">
@@ -172,6 +172,7 @@ export default async function RestaurantPage({
             remaining: s.remaining,
             status: s.status,
           }))}
+          minimumLeadTimeDays={restaurant.minimumLeadTimeDays}
         />
 
         {reviews.length > 0 && (
