@@ -104,12 +104,14 @@ export function Footer() {
           <div className="flex flex-col sm:flex-row gap-8 sm:gap-16">
             <div>
               <p className="text-xs font-semibold text-stone-400 tracking-wide mb-3">PRE-MEAL</p>
-              <ul className="flex flex-col gap-2 text-sm text-stone-600">
+              {/* Two columns — five links in one narrow column left a lot
+                  of empty width next to it; this fills that gap instead. */}
+              <ul className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-stone-600">
                 <li><Link href="/how-it-works" className="hover:text-orange-600">How it works</Link></li>
-                <li><Link href="/about" className="hover:text-orange-600">About</Link></li>
-                <li><Link href="/food-safety" className="hover:text-orange-600">Food safety</Link></li>
                 <li><Link href="/signup" className="hover:text-orange-600">Sign up your restaurant</Link></li>
+                <li><Link href="/about" className="hover:text-orange-600">About</Link></li>
                 <li><Link href="/login" className="hover:text-orange-600">Log in</Link></li>
+                <li><Link href="/food-safety" className="hover:text-orange-600">Food safety</Link></li>
               </ul>
             </div>
             <div>
@@ -126,7 +128,7 @@ export function Footer() {
                   homepage-landing.tsx) — not publicly listed on either
                   store yet, so no real href until there's a real
                   destination to send someone to. */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-row gap-2">
                 <span className="cursor-not-allowed opacity-90">
                   <Image src="/apple-appstore-logo.png" alt="Download on the App Store — coming soon" width={135} height={45} className="h-9 w-auto" />
                 </span>
