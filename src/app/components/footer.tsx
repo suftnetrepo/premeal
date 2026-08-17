@@ -50,6 +50,7 @@ export function Footer() {
               <ul className="flex flex-col gap-2 text-sm text-stone-600">
                 <li><Link href="/#how-it-works" className="hover:text-orange-600">How it works</Link></li>
                 <li><Link href="/about" className="hover:text-orange-600">About</Link></li>
+                <li><Link href="/food-safety" className="hover:text-orange-600">Food safety</Link></li>
                 <li><Link href="/signup" className="hover:text-orange-600">Sign up your restaurant</Link></li>
                 <li><Link href="/login" className="hover:text-orange-600">Log in</Link></li>
               </ul>

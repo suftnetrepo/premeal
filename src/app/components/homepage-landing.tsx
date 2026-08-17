@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   CheckCircle2,
   CalendarClock,
@@ -6,6 +7,7 @@ import {
   Wallet,
   Smartphone,
   Star,
+  BadgeCheck,
 } from "lucide-react";
 import { AddressSearch } from "./address-search";
 import type { PlatformStats } from "@/lib/homepage-stats";
@@ -65,27 +67,57 @@ export function HomepageLanding({
           </div>
         </div>
 
-        {/* Value props — real claims only. */}
-        <div id="how-it-works" className="mx-auto max-w-7xl px-4 pb-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Value props — real claims only. The food-safety tile is
+            deliberately worded about the gate every NEW restaurant goes
+            through (see approveRestaurant() in src/lib/admin.ts), not "every
+            restaurant on the platform" — checked directly against
+            production before shipping: the restaurants approved before
+            that gate existed predate it and don't have the document on
+            file, so a blanket present-tense claim about all of them would
+            have been false. See /food-safety for the full picture. */}
+        <div id="how-it-works" className="mx-auto max-w-7xl px-4 pb-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
           {[
             { icon: CalendarClock, title: "Schedule, not rush", body: "Book your delivery slot days ahead." },
             { icon: ShieldCheck, title: "Real reviews only", body: "Reviews come from orders actually delivered." },
             { icon: CheckCircle2, title: "Confirmed fast", body: "Restaurants respond within 30 minutes." },
             { icon: Wallet, title: "Fair & transparent", body: "You pay exactly what the restaurant charges." },
-          ].map((item) => (
-            <div
-              key={item.title}
-              className="bg-white rounded-2xl border border-stone-200 p-5 flex items-start gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                <item.icon size={18} strokeWidth={1.75} />
+            {
+              icon: BadgeCheck,
+              title: "Registered & verified",
+              body: "Every new restaurant confirms real food safety registration before joining our platform.",
+              href: "/food-safety",
+              linkLabel: "How we check",
+            },
+          ].map((item) => {
+            const cardClassName =
+              "bg-white rounded-2xl border border-stone-200 p-5 flex items-start gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200";
+            const href: string | undefined = item.href;
+            const content = (
+              <>
+                <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                  <item.icon size={18} strokeWidth={1.75} />
+                </div>
+                <div>
+                  <p className="font-semibold text-stone-900 text-sm mb-0.5">{item.title}</p>
+                  <p className="text-sm text-stone-500">{item.body}</p>
+                  {href && (
+                    <span className="inline-block text-xs font-medium text-orange-600 mt-1.5">
+                      {item.linkLabel} →
+                    </span>
+                  )}
+                </div>
+              </>
+            );
+            return href ? (
+              <Link key={item.title} href={href} className={cardClassName}>
+                {content}
+              </Link>
+            ) : (
+              <div key={item.title} className={cardClassName}>
+                {content}
               </div>
-              <div>
-                <p className="font-semibold text-stone-900 text-sm mb-0.5">{item.title}</p>
-                <p className="text-sm text-stone-500">{item.body}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Real numbers only — each stat is computed live and simply

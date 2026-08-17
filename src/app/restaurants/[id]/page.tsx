@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Award } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatMoney, formatDate } from "@/lib/format";
 import { OrderForm } from "./order-form";
 import { StarDisplay } from "@/app/components/stars";
-import { hygieneCertificateBadgeText } from "@/lib/hygiene-certificate";
+import { HygieneBadge } from "@/app/components/hygiene-badge";
 
 export const dynamic = "force-dynamic"; // capacity must always be fresh, never cached
 
@@ -125,13 +125,12 @@ export default async function RestaurantPage({
           {/* Only ever rendered for a genuinely VERIFIED certificate —
               nothing shows for pending, rejected, or never-submitted, on
               purpose. No partial-credit display: a claimed-but-unverified
-              level is not a trust signal, so it isn't one here either. */}
-          {restaurant.hygieneCertificateStatus === "VERIFIED" && restaurant.hygieneCertificateLevel && (
-            <span className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
-              <Award size={13} strokeWidth={1.75} />
-              {hygieneCertificateBadgeText(restaurant.hygieneCertificateLevel)}
-            </span>
-          )}
+              level is not a trust signal, so it isn't one here either.
+              Shared with the browse/results cards via HygieneBadge, so
+              this rule lives in exactly one place. */}
+          <div className="mt-3">
+            <HygieneBadge status={restaurant.hygieneCertificateStatus} level={restaurant.hygieneCertificateLevel} />
+          </div>
           {/* The full description now lives in OrderForm's sidebar
               instead of here — shown alongside phone/email so it reads
               as one coherent "about this restaurant" section next to

@@ -5,6 +5,7 @@ import { formatMoney } from "@/lib/format";
 import { kmToMiles } from "@/lib/geo";
 import { AddressSearch } from "./address-search";
 import { StarDisplay } from "./stars";
+import { HygieneBadge } from "./hygiene-badge";
 import type { RestaurantListItem } from "@/lib/restaurant-listing";
 
 const CUISINE_ICONS: Record<string, LucideIcon> = {
@@ -200,6 +201,12 @@ export function HomepageResults({
                     {r.cuisine} · {formatMoney(r.deliveryFeeCents)} delivery · {formatMoney(r.minOrderCents)} min
                     {r.distanceKm !== null && r.distanceKm !== undefined && ` · ${kmToMiles(r.distanceKm).toFixed(1)} mi`}
                   </p>
+                  {/* Same shared component and same VERIFIED-only rule as
+                      the detail page — a card never shows a claimed-but-
+                      unverified level either. */}
+                  <div className="mt-1.5 empty:mt-0">
+                    <HygieneBadge status={r.hygieneCertificateStatus} level={r.hygieneCertificateLevel} size="sm" />
+                  </div>
                   {popularDishes.length > 0 && (
                     <p className="text-xs text-stone-400 mt-2 truncate">
                       Popular: {popularDishes.join(" · ")}
