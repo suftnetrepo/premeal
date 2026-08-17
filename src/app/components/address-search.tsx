@@ -4,7 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AddressAutocomplete } from "./address-autocomplete";
 
-export function AddressSearch({ currentAddress }: { currentAddress?: string }) {
+export function AddressSearch({
+  currentAddress,
+  submitLabel = "Search",
+}: {
+  currentAddress?: string;
+  submitLabel?: string;
+}) {
   const router = useRouter();
   const [address, setAddress] = useState(currentAddress ?? "");
   const [searching, setSearching] = useState(false);
@@ -67,7 +73,7 @@ export function AddressSearch({ currentAddress }: { currentAddress?: string }) {
           disabled={searching}
           className="bg-orange-600 disabled:bg-gray-300 text-white rounded-lg px-6 text-sm font-medium"
         >
-          {searching ? "Searching…" : "Search"}
+          {searching ? "Searching…" : submitLabel}
         </button>
       </div>
       {error && <p className="text-xs text-red-600 mt-2">{error}</p>}

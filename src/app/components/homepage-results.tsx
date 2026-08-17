@@ -67,170 +67,227 @@ export function HomepageResults({
   sorted: RestaurantListItem[];
   popularDishesByRestaurant: Map<string, string[]>;
 }) {
+  const hasActiveFilters = Boolean(minRating) || Boolean(sort);
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2 text-sm">
-          <MapPin size={16} className="text-orange-600" strokeWidth={2} />
-          <span className="text-stone-700 font-medium">{address}</span>
+    <div>
+      {/* -----------------------------------------------------------------
+          Hero band — full-bleed public/search-result-hero.png, a real
+          uploaded photo (same "real photo, not a gradient placeholder"
+          approach as the homepage's own hero — see homepage-landing.tsx).
+          A fixed left-to-right dark overlay guarantees the address/
+          headline stay legible regardless of how object-cover crops the
+          photo at a given viewport width, rather than relying on the
+          photo's own dark region lining up correctly at every size.
+      ----------------------------------------------------------------- */}
+      <div className="relative overflow-hidden bg-stone-900">
+        <Image
+          src="/search-result-hero.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-stone-900/90 via-stone-900/70 to-stone-900/30" />
+
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:py-16">
+          <div className="flex items-center gap-2 text-sm mb-4">
+            <MapPin size={16} className="text-orange-400" strokeWidth={2} />
+            <span className="text-white font-medium">{address}</span>
+            <Link
+              href={buildQuery(params, { lat: undefined, lng: undefined, address: undefined, clear: "1" })}
+              className="text-orange-400 font-medium hover:text-orange-300 transition-colors"
+            >
+              Change
+            </Link>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-6">
+            Find your next meal
+          </h1>
+          <div className="max-w-xl bg-white rounded-2xl p-3 shadow-xl">
+            <AddressSearch currentAddress={address} submitLabel="Search restaurants" />
+          </div>
         </div>
-        <Link
-          href={buildQuery(params, { lat: undefined, lng: undefined, address: undefined, clear: "1" })}
-          className="text-xs text-orange-600 font-medium"
-        >
-          Change
-        </Link>
       </div>
 
-      <div className="mb-8 bg-white rounded-2xl border border-stone-200 p-3 shadow-sm">
-        <AddressSearch currentAddress={address} />
-      </div>
-
-      <p className="text-xl font-bold text-stone-900 mb-4">Find your favourite</p>
-
-      {/* Category pills, not circles — real cuisines only */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-6">
-        <Link
-          href={buildQuery(params, { cuisine: undefined })}
-          className={`shrink-0 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium border transition-colors ${
-            !cuisine ? "bg-orange-600 text-white border-orange-600" : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
-          }`}
-        >
-          <UtensilsCrossed size={16} strokeWidth={1.75} /> All
-        </Link>
-        {availableCuisines.map((c) => (
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        {/* Category pills, not circles — real cuisines only */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-8">
           <Link
-            key={c}
-            href={buildQuery(params, { cuisine: cuisine === c ? undefined : c })}
+            href={buildQuery(params, { cuisine: undefined })}
             className={`shrink-0 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium border transition-colors ${
-              cuisine === c ? "bg-orange-600 text-white border-orange-600" : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+              !cuisine ? "bg-orange-600 text-white border-orange-600" : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
             }`}
           >
-            <CuisineIcon cuisine={c} size={16} /> {c}
+            <UtensilsCrossed size={16} strokeWidth={1.75} /> All cuisines
           </Link>
-        ))}
-      </div>
+          {availableCuisines.map((c) => (
+            <Link
+              key={c}
+              href={buildQuery(params, { cuisine: cuisine === c ? undefined : c })}
+              className={`shrink-0 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium border transition-colors ${
+                cuisine === c ? "bg-orange-600 text-white border-orange-600" : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+              }`}
+            >
+              <CuisineIcon cuisine={c} size={16} /> {c}
+            </Link>
+          ))}
+        </div>
 
-      <div className="flex flex-col sm:flex-row gap-8">
-        {/* Sidebar — real filters only. The brief's "delivery fee" and
-            "delivery time" filters are skipped: delivery fee is a flat
-            rate across the whole app (not something to filter by yet),
-            and delivery-time estimates aren't tracked anywhere. An "Open
-            now" toggle is skipped too — every restaurant shown here
-            already has open delivery slots, so it would filter nothing. */}
-        <aside className="sm:w-52 shrink-0">
-          <div className="bg-white rounded-2xl border border-stone-200 p-4">
-            <p className="font-semibold text-stone-900 mb-4">{sorted.length} places</p>
+        <div className="flex flex-col sm:flex-row gap-8">
+          {/* Sidebar — real filters only. The brief's "delivery fee" and
+              "delivery time" filters are skipped: delivery fee is a flat
+              rate across the whole app (not something to filter by yet),
+              and delivery-time estimates aren't tracked anywhere. An "Open
+              now" toggle is skipped too — every restaurant shown here
+              already has open delivery slots, so it would filter nothing.
+              Every control here applies instantly via its own link (no
+              separate "Apply" step to fake), so "Clear all" is real too —
+              it resets both filters in one click, not just cosmetic. */}
+          <aside className="sm:w-56 shrink-0">
+            <div className="bg-white rounded-2xl border border-stone-200 p-4 sm:sticky sm:top-4">
+              <div className="flex items-center justify-between mb-4">
+                <p className="font-semibold text-stone-900">Filters</p>
+                {hasActiveFilters && (
+                  <Link
+                    href={buildQuery(params, { minRating: undefined, sort: undefined })}
+                    className="text-xs text-orange-600 font-medium hover:text-orange-700"
+                  >
+                    Clear all
+                  </Link>
+                )}
+              </div>
 
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100">
-              <label htmlFor="rating-toggle" className="text-sm text-stone-700">
-                4+ rated
-              </label>
-              <Link
-                id="rating-toggle"
-                href={buildQuery(params, { minRating: minRating === "4" ? undefined : "4" })}
-                className={`w-10 h-6 rounded-full flex items-center px-0.5 transition-colors ${
-                  minRating === "4" ? "bg-orange-600 justify-end" : "bg-stone-200 justify-start"
-                }`}
-              >
-                <span className="w-5 h-5 rounded-full bg-white block shadow-sm" />
-              </Link>
-            </div>
-
-            <p className="text-xs font-semibold text-stone-400 tracking-wide mb-2">SORT BY</p>
-            <div className="flex flex-col gap-1">
-              {[
-                { key: undefined, label: "Best match" },
-                { key: "near", label: "Nearest" },
-                { key: "price", label: "Min order: low to high" },
-                { key: "rating", label: "Highest rated" },
-              ].map((opt) => (
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100">
+                <label htmlFor="rating-toggle" className="text-sm text-stone-700">
+                  4+ rated only
+                </label>
                 <Link
-                  key={opt.label}
-                  href={buildQuery(params, { sort: opt.key })}
-                  className={`text-sm text-left px-3 py-2 rounded-xl transition-colors ${
-                    (sort ?? undefined) === opt.key ? "bg-orange-50 text-orange-700 font-medium" : "text-stone-600 hover:bg-stone-50"
+                  id="rating-toggle"
+                  href={buildQuery(params, { minRating: minRating === "4" ? undefined : "4" })}
+                  className={`w-10 h-6 rounded-full flex items-center px-0.5 transition-colors ${
+                    minRating === "4" ? "bg-orange-600 justify-end" : "bg-stone-200 justify-start"
                   }`}
                 >
-                  {opt.label}
+                  <span className="w-5 h-5 rounded-full bg-white block shadow-sm" />
                 </Link>
-              ))}
-            </div>
-          </div>
-        </aside>
+              </div>
 
-        {/* Restaurant grid — 3 columns desktop. Real data only: flat
-            delivery fee (not fabricated per-card variation), real ratings
-            (or "New" — never a placeholder number), and a "Popular
-            dishes" row that only appears when there's genuine order
-            history to back it. */}
-        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {sorted.map((r) => {
-            const popularDishes = popularDishesByRestaurant.get(r.id) ?? [];
-            return (
-              <Link
-                key={r.id}
-                href={`/restaurants/${r.id}`}
-                className="group bg-white border border-stone-200 rounded-2xl overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
-              >
-                <div className="relative w-full h-36 bg-orange-50">
-                  {r.imageUrl ? (
-                    <Image src={r.imageUrl} alt={r.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-orange-300">
-                      <CuisineIcon cuisine={r.cuisine} size={36} />
-                    </div>
-                  )}
-                  <span className="absolute top-3 left-3 text-xs font-medium bg-white/95 backdrop-blur text-green-700 rounded-full px-2.5 py-1">
-                    Open
-                  </span>
-                </div>
-                <div className="p-4">
-                  <p className="font-semibold text-stone-900 truncate">{r.name}</p>
-                  {r.averageRating !== null ? (
-                    <div className="flex items-center gap-1 mt-1">
-                      <StarDisplay rating={r.averageRating} />
-                      <span className="text-xs text-stone-500">
-                        {r.averageRating.toFixed(1)} ({r.reviewCount})
+              <p className="text-xs font-semibold text-stone-400 tracking-wide mb-2">SORT BY</p>
+              <div className="flex flex-col gap-1">
+                {[
+                  { key: undefined, label: "Best match" },
+                  { key: "near", label: "Nearest" },
+                  { key: "price", label: "Min order: low to high" },
+                  { key: "rating", label: "Highest rated" },
+                ].map((opt) => (
+                  <Link
+                    key={opt.label}
+                    href={buildQuery(params, { sort: opt.key })}
+                    className={`text-sm text-left px-3 py-2 rounded-xl transition-colors ${
+                      (sort ?? undefined) === opt.key ? "bg-orange-50 text-orange-700 font-medium" : "text-stone-600 hover:bg-stone-50"
+                    }`}
+                  >
+                    {opt.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-lg font-bold text-stone-900 mb-4">
+              {sorted.length} restaurant{sorted.length === 1 ? "" : "s"}
+            </p>
+
+            {/* Restaurant grid — 3 columns desktop. Real data only: flat
+                delivery fee (not fabricated per-card variation), real
+                ratings (or "New" — never a placeholder number), and a
+                "Popular dishes" row that only appears when there's genuine
+                order history to back it. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sorted.map((r) => {
+                const popularDishes = popularDishesByRestaurant.get(r.id) ?? [];
+                return (
+                  <Link
+                    key={r.id}
+                    href={`/restaurants/${r.id}`}
+                    className="group bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+                  >
+                    <div className="relative w-full h-44 bg-orange-50">
+                      {r.imageUrl ? (
+                        <Image src={r.imageUrl} alt={r.name} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-orange-300">
+                          <CuisineIcon cuisine={r.cuisine} size={36} />
+                        </div>
+                      )}
+                      {/* Subtle depth, not a text overlay — the name/rating
+                          stay below the photo, same structure as before,
+                          this just gives the "Open" pill a little more
+                          separation from a bright photo. */}
+                      <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/25 to-transparent" />
+                      <span className="absolute top-3 left-3 text-xs font-semibold bg-white/95 backdrop-blur text-green-700 rounded-full px-2.5 py-1 shadow-sm">
+                        Open
                       </span>
                     </div>
-                  ) : (
-                    <p className="text-xs text-stone-400 mt-1">New</p>
-                  )}
-                  <p className="text-sm text-stone-500 mt-1.5">
-                    {r.cuisine} · {formatMoney(r.deliveryFeeCents)} delivery · {formatMoney(r.minOrderCents)} min
-                    {r.distanceKm !== null && r.distanceKm !== undefined && ` · ${kmToMiles(r.distanceKm).toFixed(1)} mi`}
-                  </p>
-                  {/* Same shared component and same VERIFIED-only rule as
-                      the detail page — a card never shows a claimed-but-
-                      unverified level either. */}
-                  <div className="mt-1.5 empty:mt-0">
-                    <HygieneBadge status={r.hygieneCertificateStatus} level={r.hygieneCertificateLevel} size="sm" />
-                  </div>
-                  {popularDishes.length > 0 && (
-                    <p className="text-xs text-stone-400 mt-2 truncate">
-                      Popular: {popularDishes.join(" · ")}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            );
-          })}
-          {sorted.length === 0 && cuisine && (
-            <p className="text-stone-500 text-sm sm:col-span-2 lg:col-span-3">
-              No {cuisine} restaurants deliver to that address yet — try{" "}
-              <Link href={buildQuery(params, { cuisine: undefined })} className="text-orange-600">
-                browsing all cuisines
-              </Link>{" "}
-              instead.
-            </p>
-          )}
-          {sorted.length === 0 && !cuisine && (
-            <p className="text-stone-500 text-sm sm:col-span-2 lg:col-span-3">
-              No restaurants currently deliver to that address. Try a different one, or{" "}
-              <Link href="/" className="text-orange-600">search again</Link>.
-            </p>
-          )}
+                    <div className="p-4">
+                      <p className="font-semibold text-stone-900 truncate">{r.name}</p>
+                      {r.averageRating !== null ? (
+                        <div className="flex items-center gap-1 mt-1">
+                          <StarDisplay rating={r.averageRating} />
+                          <span className="text-xs text-stone-500">
+                            {r.averageRating.toFixed(1)} ({r.reviewCount})
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-stone-400 mt-1">New</p>
+                      )}
+                      <p className="text-sm text-stone-500 mt-1.5">
+                        {r.cuisine} · {formatMoney(r.deliveryFeeCents)} delivery · {formatMoney(r.minOrderCents)} min
+                        {r.distanceKm !== null && r.distanceKm !== undefined && ` · ${kmToMiles(r.distanceKm).toFixed(1)} mi`}
+                      </p>
+                      {/* Same shared component and same VERIFIED-only rule
+                          as the detail page — a card never shows a
+                          claimed-but-unverified level either. */}
+                      <div className="mt-1.5 empty:mt-0">
+                        <HygieneBadge status={r.hygieneCertificateStatus} level={r.hygieneCertificateLevel} size="sm" />
+                      </div>
+                      {popularDishes.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                          <span className="text-[11px] text-stone-400 font-medium">Popular</span>
+                          {popularDishes.map((dish) => (
+                            <span
+                              key={dish}
+                              className="text-[11px] text-stone-600 bg-stone-50 border border-stone-200 rounded-full px-2 py-0.5 truncate max-w-[120px]"
+                            >
+                              {dish}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+              {sorted.length === 0 && cuisine && (
+                <p className="text-stone-500 text-sm sm:col-span-2 lg:col-span-3">
+                  No {cuisine} restaurants deliver to that address yet — try{" "}
+                  <Link href={buildQuery(params, { cuisine: undefined })} className="text-orange-600">
+                    browsing all cuisines
+                  </Link>{" "}
+                  instead.
+                </p>
+              )}
+              {sorted.length === 0 && !cuisine && (
+                <p className="text-stone-500 text-sm sm:col-span-2 lg:col-span-3">
+                  No restaurants currently deliver to that address. Try a different one, or{" "}
+                  <Link href="/" className="text-orange-600">search again</Link>.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
