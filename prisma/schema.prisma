@@ -9,7 +9,17 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // DATABASE_URL is Neon's pooled connection string (hostname contains
+  // "-pooler") — safe under the high, bursty connection counts a
+  // serverless host like Vercel creates, since every request can be a
+  // fresh function instance. DIRECT_URL is the same database's unpooled
+  // connection (same credentials, hostname without "-pooler") — Neon's
+  // pooler doesn't support the advisory locks/prepared statements
+  // `prisma migrate deploy` needs, so migrations bypass it and connect
+  // directly instead. Query traffic at runtime still goes through `url`
+  // (pooled) — directUrl is only ever used for migrations.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
