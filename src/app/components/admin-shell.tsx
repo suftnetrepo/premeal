@@ -13,7 +13,7 @@ export function AdminShell({ user, children }: { user: User; children: React.Rea
         <header className="border-b border-stone-200 bg-white">
           <div className="px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link href="/admin" className="font-bold text-stone-900 flex items-center gap-1.5">
-              <Image src="/logo.svg" alt="" width={22} height={22} /> Pre-Meal
+              <Image src="/logo.png" alt="" width={22} height={22} /> Pre-Meal
             </Link>
             <div className="flex items-center gap-3">
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-stone-100 text-stone-600">Admin</span>

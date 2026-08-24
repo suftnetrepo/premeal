@@ -20,7 +20,7 @@ export async function Nav() {
     <NavShell>
       <div className="mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
         <Link href="/" className="font-bold text-stone-900 flex items-center gap-1.5">
-          <Image src="/logo.svg" alt="" width={22} height={22} /> Pre-Meal
+          <Image src="/logo.png" alt="" width={48} height={48} /> Pre-Meal
         </Link>
 
         {user ? (

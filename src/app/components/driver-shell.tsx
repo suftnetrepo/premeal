@@ -9,7 +9,7 @@ export function DriverShell({ user, children }: { user: User; children: React.Re
       <header className="border-b border-stone-200 bg-white">
         <div className="px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link href="/driver/dashboard" className="font-bold text-stone-900 flex items-center gap-1.5">
-            <Image src="/logo.svg" alt="" width={22} height={22} /> Pre-Meal <span className="text-stone-400 font-normal">Driver</span>
+            <Image src="/logo.png" alt="" width={22} height={22} /> Pre-Meal <span className="text-stone-400 font-normal">Driver</span>
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-400 hidden sm:inline">{user.name}</span>
