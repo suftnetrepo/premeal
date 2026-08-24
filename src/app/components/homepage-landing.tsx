@@ -27,9 +27,7 @@ export function HomepageLanding({
       <section className="bg-gradient-to-b from-orange-50/60 to-white border-b border-stone-100">
         <div className="mx-auto max-w-7xl grid md:grid-cols-2 gap-10 md:gap-8 px-4 py-10 md:py-14">
           <div className="flex flex-col justify-center">
-            <p className="text-xs font-semibold tracking-widest text-orange-600 mb-4">
-              SCHEDULE AHEAD · EAT ON TIME
-            </p>
+          
             <h1 className="text-[34px] sm:text-[42px] lg:text-[64px] font-black tracking-tight text-stone-900 leading-[1.05] mb-5">
               Fresh food.
               <br />
@@ -41,14 +39,14 @@ export function HomepageLanding({
               Pick a restaurant, choose your delivery day and time, and we&apos;ll confirm within
               30 minutes.
             </p>
-            <div className="bg-white rounded-2xl border border-stone-200 p-3 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+            <div className=" p-3 ">
               <AddressSearch />
             </div>
           </div>
 
-          <div className="relative flex items-center justify-center min-h-[360px] rounded-3xl overflow-hidden">
+          <div className="relative flex items-center justify-center min-h-[360px] overflow-hidden">
             <Image
-              src="/hero.jpg"
+              src="/happy_family.png"
               alt="A real spread of dishes cooked for scheduled delivery"
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -58,9 +56,6 @@ export function HomepageLanding({
             {/* Fades the photo's left edge into the section's cream
                 background instead of a hard rectangular seam against
                 the text column. */}
-            <div className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-orange-50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-black/0 to-black/0" />
-
            
           </div>
         </div>
@@ -73,17 +68,17 @@ export function HomepageLanding({
             safety checks specifically. */}
         <div className="mx-auto max-w-7xl px-4 pb-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {[
-            { icon: CalendarClock, title: "Schedule, not rush", body: "Book your delivery slot days ahead." },
-            { icon: ShieldCheck, title: "Real reviews only", body: "Reviews come from orders actually delivered." },
-            { icon: CheckCircle2, title: "Confirmed fast", body: "Restaurants respond within 30 minutes." },
-            { icon: Wallet, title: "Fair & transparent", body: "You pay exactly what the restaurant charges." },
+            { icon: CalendarClock, title: "Schedule, not rush", body: "Book your delivery slot days ahead.", color: "bg-sky-50 text-sky-600" },
+            { icon: ShieldCheck, title: "Real reviews only", body: "Reviews come from orders actually delivered.", color: "bg-emerald-50 text-emerald-600" },
+            { icon: CheckCircle2, title: "Confirmed fast", body: "Restaurants respond within 30 minutes.", color: "bg-violet-50 text-violet-600" },
+            { icon: Wallet, title: "Fair & transparent", body: "You pay exactly what the restaurant charges.", color: "bg-amber-50 text-amber-600" },
           ].map((item) => (
             <div
               key={item.title}
               className="bg-white rounded-2xl border border-stone-200 p-5 flex items-start gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                <item.icon size={18} strokeWidth={1.75} />
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${item.color}`}>
+                <item.icon size={32} strokeWidth={1.75} />
               </div>
               <div>
                 <p className="font-semibold text-stone-900 text-sm mb-0.5">{item.title}</p>
@@ -139,9 +134,7 @@ export function HomepageLanding({
       <section className="bg-stone-50 border-t border-stone-100">
         <div className="mx-auto max-w-7xl px-4 py-10 grid md:grid-cols-2 gap-10 items-center">
           <div>
-            <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-4">
-              <Smartphone size={22} strokeWidth={1.75} />
-            </div>
+          
             <p className="text-2xl font-black text-stone-900 mb-2">The app is on its way</p>
             <p className="text-stone-600 mb-6 max-w-sm">
               Native iOS and Android apps are planned before launch — for now, order from your
@@ -168,10 +161,8 @@ export function HomepageLanding({
            
             
             ].map((screen) => (
-              <div key={screen.label} className="shrink-0 w-36 rounded-2xl border-4 border-stone-900 bg-white overflow-hidden shadow-lg">
-                <div className="h-4 bg-stone-900 flex items-center justify-center">
-                  <div className="w-8 h-1.5 rounded-full bg-stone-700" />
-                </div>
+              <div key={screen.label} className="shrink-0 w-36 rounded-2xl bg-white overflow-hidden shadow-lg">
+               
                 <div className="relative w-full aspect-1242/2688">
                   <Image
                     src={`/mobile-app/${screen.file}.png`}
@@ -181,7 +172,7 @@ export function HomepageLanding({
                     className="object-cover"
                   />
                 </div>
-                <p className="text-[9px] text-center text-stone-400 py-2">{screen.label}</p>
+               
               </div>
             ))}
           </div>

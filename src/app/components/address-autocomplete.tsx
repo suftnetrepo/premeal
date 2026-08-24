@@ -71,6 +71,13 @@ export function AddressAutocomplete({
     setOpen(false);
   }
 
+  const inputClassName = className ?? "border border-gray-200 rounded-lg p-2.5 text-sm w-full";
+  // The suggestions dropdown should read as part of the same control as the
+  // input, so it borrows the input's own corner radius instead of a radius
+  // hardcoded here that could drift from whatever each call site passes in.
+  const roundedMatch = inputClassName.match(/(?:^|\s)(rounded(?:-\w+)?)(?=\s|$)/);
+  const roundedClass = roundedMatch ? roundedMatch[1] : "rounded-lg";
+
   return (
     <div className="relative">
       <input
@@ -84,11 +91,23 @@ export function AddressAutocomplete({
           onBlur?.();
         }}
         placeholder={placeholder}
-        className={className ?? "border border-gray-200 rounded-lg p-2.5 text-sm w-full"}
+        // The browser's default focus outline is a plain rectangle — it
+        // doesn't follow the input's own rounded corners, so it renders as
+        // a square blue box poking out past a rounded border. Swap it for a
+        // ring, which does follow border-radius, on every call site.
+        //
+        // bg-white is forced on too: none of this component's callers set
+        // their own background, and Tailwind's preflight makes inputs
+        // transparent by default — over the hero photo that left the text
+        // unreadable, so every instance gets an opaque background here
+        // rather than each call site having to remember to add one.
+        className={`${inputClassName} bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
         autoComplete="off"
       />
       {open && (suggestions.length > 0 || loading) && (
-        <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div
+          className={`absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 ${roundedClass} shadow-sm overflow-hidden`}
+        >
           {loading && suggestions.length === 0 && (
             <p className="text-xs text-gray-400 px-3 py-2">Searching…</p>
           )}

@@ -80,16 +80,22 @@ export function HomepageResults({
           photo at a given viewport width, rather than relying on the
           photo's own dark region lining up correctly at every size.
       ----------------------------------------------------------------- */}
-      <div className="relative overflow-hidden bg-stone-900">
-        <Image
-          src="/search-result-hero.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-stone-900/90 via-stone-900/70 to-stone-900/30" />
+      <div className="relative bg-stone-900">
+        {/* overflow-hidden is scoped to just the photo + overlay, not the
+            whole hero — the hero also contains the address autocomplete,
+            and its suggestions dropdown needs to be able to overflow below
+            the hero's own bottom edge instead of getting clipped by it. */}
+        <div className="absolute inset-0 overflow-hidden">
+          <Image
+            src="/search-result-hero.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-stone-900/90 via-stone-900/70 to-stone-900/30" />
+        </div>
 
         <div className="relative mx-auto max-w-7xl px-4 py-12 sm:py-16">
           <div className="flex items-center gap-2 text-sm mb-4">
@@ -105,7 +111,7 @@ export function HomepageResults({
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-6">
             Find your next meal
           </h1>
-          <div className="max-w-xl bg-white rounded-2xl p-3 shadow-xl">
+          <div className="max-w-xl rounded-2xl shadow-xl">
             <AddressSearch currentAddress={address} submitLabel="Search restaurants" />
           </div>
         </div>

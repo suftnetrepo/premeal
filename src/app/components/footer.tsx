@@ -53,22 +53,22 @@ export function Footer() {
           (see "GET THE APP" below), shown honestly as not-yet-linked
           rather than faked here. */}
       <div className="mx-auto max-w-7xl px-4 py-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
-        <div className="flex items-start gap-3">
-          <Clock3 size={20} className="text-orange-600 shrink-0 mt-0.5" strokeWidth={1.75} />
+          <div className="flex justify-start items-center gap-3">
+          <Clock3 size={48} className="text-sky-600 shrink-0 mt-0.5" strokeWidth={1.75} />
           <div>
             <p className="font-semibold text-stone-900 text-sm mb-0.5">Scheduled, not rushed</p>
             <p className="text-sm text-stone-500">Restaurants cook for the slot you booked, not a rush order.</p>
           </div>
         </div>
-        <div className="flex items-start gap-3">
-          <ShieldCheck size={20} className="text-orange-600 shrink-0 mt-0.5" strokeWidth={1.75} />
+        <div className="flex justify-start items-center gap-3">
+          <ShieldCheck size={48} className="text-emerald-600 shrink-0 mt-0.5" strokeWidth={1.75} />
           <div>
             <p className="font-semibold text-stone-900 text-sm mb-0.5">Real reviews only</p>
             <p className="text-sm text-stone-500">You can only review an order you actually received.</p>
           </div>
         </div>
-        <div className="flex items-start gap-3">
-          <Wallet size={20} className="text-orange-600 shrink-0 mt-0.5" strokeWidth={1.75} />
+         <div className="flex justify-start items-center gap-3">
+          <Wallet size={48} className="text-amber-600 shrink-0 mt-0.5" strokeWidth={1.75} />
           <div>
             <p className="font-semibold text-stone-900 text-sm mb-0.5">Fair fees</p>
             <p className="text-sm text-stone-500">Restaurants keep 100% of the delivery fee they charge.</p>
@@ -80,7 +80,7 @@ export function Footer() {
         <div className="mx-auto max-w-7xl px-4 py-10 flex flex-col sm:flex-row sm:items-start justify-between gap-8">
           <div>
             <p className="font-semibold text-stone-900 flex items-center gap-1.5">
-              <Image src="/logo.png" alt="" width={18} height={18} /> Pre-Meal
+              <Image src="/logo.png" alt="" width={48} height={18} /> Pre-Meal
             </p>
             <p className="text-sm text-stone-500 mt-1 max-w-xs">Order today, eat exactly when you planned to.</p>
 
