@@ -10,7 +10,7 @@ export default function FoodSafetyPage() {
 
       <div className="flex flex-col gap-8 text-stone-600">
         <p>
-          There are two separate layers here — one every restaurant on Pre-Meal goes through, and one
+          There are two separate layers here — one every restaurant on Nriya goes through, and one
           that&apos;s optional. We&apos;d rather explain both plainly than let either one sound bigger than
           it is.
         </p>

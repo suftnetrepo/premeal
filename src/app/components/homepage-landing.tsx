@@ -46,11 +46,11 @@ export function HomepageLanding({
 
           <div className="relative flex items-center justify-center min-h-[360px] overflow-hidden">
             <Image
-              src="/happy_family.png"
+              src="/food.png"
               alt="A real spread of dishes cooked for scheduled delivery"
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
+              className="object-contain"
               priority
             />
             {/* Fades the photo's left edge into the section's cream

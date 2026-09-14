@@ -4,7 +4,7 @@ export default function TermsPage() {
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8">
         <p className="text-sm text-amber-800 font-medium mb-1">Draft — not reviewed by a lawyer</p>
         <p className="text-sm text-amber-700">
-          This is a first-pass draft reflecting how Pre-Meal actually works, written to save a lawyer time,
+          This is a first-pass draft reflecting how Nriya actually works, written to save a lawyer time,
           not to replace one. Every bracketed placeholder needs a real decision, and the whole document needs
           real legal review before this app takes orders from real customers. Nothing on this page is legal
           advice.
@@ -16,11 +16,11 @@ export default function TermsPage() {
 
       <div className="flex flex-col gap-6 text-sm text-stone-600">
         <section>
-          <h2 className="text-base font-semibold text-stone-900 mb-2">1. What Pre-Meal is</h2>
+          <h2 className="text-base font-semibold text-stone-900 mb-2">1. What Nriya is</h2>
           <p>
-            Pre-Meal (&quot;we&quot;, &quot;us&quot;) operates a platform where customers order food ahead of
+            Nriya (&quot;we&quot;, &quot;us&quot;) operates a platform where customers order food ahead of
             time for a scheduled delivery window, and independent restaurants confirm and fulfil those orders.
-            Pre-Meal is a marketplace connecting customers and restaurants — restaurants prepare and deliver
+            Nriya is a marketplace connecting customers and restaurants — restaurants prepare and deliver
             the food themselves; we are not the restaurant and do not prepare or deliver food ourselves.
           </p>
         </section>
@@ -30,7 +30,7 @@ export default function TermsPage() {
           <p>
             You need an account to order or to list a restaurant. You&apos;re responsible for keeping your
             login credentials secure and for activity that happens under your account. You must be able to
-            enter a legally binding contract to use Pre-Meal.
+            enter a legally binding contract to use Nriya.
           </p>
         </section>
 
@@ -70,7 +70,7 @@ export default function TermsPage() {
           <h2 className="text-base font-semibold text-stone-900 mb-2">6. Promotions and subscriptions</h2>
           <p>
             Discount codes are subject to the specific terms shown when you apply them (minimum order,
-            expiry, per-customer usage limits) and may be withdrawn or changed at any time. If Pre-Meal+ (a
+            expiry, per-customer usage limits) and may be withdrawn or changed at any time. If Nriya+ (a
             paid subscription) is available, its price and benefits are shown before you subscribe, and it
             can be cancelled at any time; cancelling stops future renewals but doesn&apos;t refund the current
             period.
@@ -80,7 +80,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-base font-semibold text-stone-900 mb-2">7. Restaurant listings</h2>
           <p>
-            Restaurants are independent businesses, not Pre-Meal employees or agents. We review and approve
+            Restaurants are independent businesses, not Nriya employees or agents. We review and approve
             restaurants before they go live and may reject or remove a listing at our discretion, including
             for repeated missed orders, food safety concerns, or fraud. Restaurants are solely responsible for
             the food they prepare, its quality, and complying with applicable food safety and licensing law.

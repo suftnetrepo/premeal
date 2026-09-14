@@ -53,47 +53,66 @@ export function Footer() {
           (see "GET THE APP" below), shown honestly as not-yet-linked
           rather than faked here. */}
       <div className="mx-auto max-w-7xl px-4 py-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
-          <div className="flex justify-start items-center gap-3">
-          <Clock3 size={48} className="text-sky-600 shrink-0 mt-0.5" strokeWidth={1.75} />
+        <div className="flex justify-start items-center gap-3">
+          <Clock3
+            size={48}
+            className="text-sky-600 shrink-0 mt-0.5"
+            strokeWidth={1.75}
+          />
           <div>
-            <p className="font-semibold text-stone-900 text-sm mb-0.5">Scheduled, not rushed</p>
-            <p className="text-sm text-stone-500">Restaurants cook for the slot you booked, not a rush order.</p>
+            <p className="font-semibold text-stone-900 text-sm mb-0.5">
+              Scheduled, not rushed
+            </p>
+            <p className="text-sm text-stone-500">
+              Restaurants cook for the slot you booked, not a rush order.
+            </p>
           </div>
         </div>
         <div className="flex justify-start items-center gap-3">
-          <ShieldCheck size={48} className="text-emerald-600 shrink-0 mt-0.5" strokeWidth={1.75} />
+          <ShieldCheck
+            size={48}
+            className="text-emerald-600 shrink-0 mt-0.5"
+            strokeWidth={1.75}
+          />
           <div>
-            <p className="font-semibold text-stone-900 text-sm mb-0.5">Real reviews only</p>
-            <p className="text-sm text-stone-500">You can only review an order you actually received.</p>
+            <p className="font-semibold text-stone-900 text-sm mb-0.5">
+              Real reviews only
+            </p>
+            <p className="text-sm text-stone-500">
+              You can only review an order you actually received.
+            </p>
           </div>
         </div>
-         <div className="flex justify-start items-center gap-3">
-          <Wallet size={48} className="text-amber-600 shrink-0 mt-0.5" strokeWidth={1.75} />
+        <div className="flex justify-start items-center gap-3">
+          <Wallet
+            size={48}
+            className="text-amber-600 shrink-0 mt-0.5"
+            strokeWidth={1.75}
+          />
           <div>
-            <p className="font-semibold text-stone-900 text-sm mb-0.5">Fair fees</p>
-            <p className="text-sm text-stone-500">Restaurants keep 100% of the delivery fee they charge.</p>
+            <p className="font-semibold text-stone-900 text-sm mb-0.5">
+              Fair fees
+            </p>
+            <p className="text-sm text-stone-500">
+              Restaurants keep 100% of the delivery fee they charge.
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-stone-200">
-        <div className="mx-auto max-w-7xl px-4 py-10 flex flex-col sm:flex-row sm:items-start justify-between gap-8">
-          <div>
-            <p className="font-semibold text-stone-900 flex items-center gap-1.5">
-              <Image src="/logo.png" alt="" width={48} height={18} /> Pre-Meal
+      <div className="border-t border-stone-200 bg-white text-stone-900">
+        <div className="mx-auto max-w-7xl px-4 py-12 lg:py-14 grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-12 lg:gap-16">
+          <div className="max-w-sm">
+            <div className="inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-stone-50 py-2 pr-4 pl-2">
+              <Image src="/logo.png" alt="" width={46} height={46} className="-mr-1" />
+              <p className="text-2xl font-bold tracking-tight leading-none">Nriya</p>
+            </div>
+            <p className="text-base leading-7 text-stone-600 mt-5 max-w-xs">
+              Better meals begin with better timing. Order ahead and enjoy food prepared for your schedule.
             </p>
-            <p className="text-sm text-stone-500 mt-1 max-w-xs">Order today, eat exactly when you planned to.</p>
-
-            {/* No real Pre-Meal social accounts exist yet — same "coming
-                soon" treatment as the App Store/Google Play badges below:
-                shown, not clickable, no placeholder/fake destination. */}
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2.5 mt-6">
               {SOCIAL_LINKS.map(({ label, Icon }) => (
-                <span
-                  key={label}
-                  title={`${label} — coming soon`}
-                  className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center opacity-90 cursor-not-allowed"
-                >
+                <span key={label} title={`${label} — coming soon`} className="w-9 h-9 rounded-full border border-stone-200 bg-stone-100 text-stone-700 flex items-center justify-center cursor-not-allowed">
                   <Icon width={15} height={15} />
                   <span className="sr-only">{label} — coming soon</span>
                 </span>
@@ -101,47 +120,97 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-8 sm:gap-16">
+          <div className="grid grid-cols-2 md:grid-cols-[1fr_0.8fr_1.4fr] gap-x-8 gap-y-10">
             <div>
-              <p className="text-xs font-semibold text-stone-400 tracking-wide mb-3">PRE-MEAL</p>
+              <p className="text-xs font-semibold text-orange-600 tracking-[0.16em] mb-4">
+                EXPLORE
+              </p>
               {/* Two columns — five links in one narrow column left a lot
                   of empty width next to it; this fills that gap instead. */}
-              <ul className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-stone-600">
-                <li><Link href="/how-it-works" className="hover:text-orange-600">How it works</Link></li>
-                <li><Link href="/signup" className="hover:text-orange-600">Sign up your restaurant</Link></li>
-                <li><Link href="/about" className="hover:text-orange-600">About</Link></li>
-                <li><Link href="/login" className="hover:text-orange-600">Log in</Link></li>
-                <li><Link href="/food-safety" className="hover:text-orange-600">Food safety</Link></li>
+              <ul className="flex flex-col gap-3 text-sm text-stone-600">
+                <li>
+                  <Link href="/how-it-works" className="hover:text-orange-600 transition-colors">
+                    How it works
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/signup" className="hover:text-orange-600 transition-colors">
+                    Sign up your restaurant
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="hover:text-orange-600 transition-colors">
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/login" className="hover:text-orange-600 transition-colors">
+                    Log in
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/food-safety" className="hover:text-orange-600 transition-colors">
+                    Food safety
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
-              <p className="text-xs font-semibold text-stone-400 tracking-wide mb-3">LEGAL</p>
-              <ul className="flex flex-col gap-2 text-sm text-stone-600">
-                <li><Link href="/terms" className="hover:text-orange-600">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="hover:text-orange-600">Privacy Policy</Link></li>
+              <p className="text-xs font-semibold text-orange-600 tracking-[0.16em] mb-4">
+                LEGAL
+              </p>
+              <ul className="flex flex-col gap-3 text-sm text-stone-600">
+                <li>
+                  <Link href="/terms" className="hover:text-orange-600 transition-colors">
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="hover:text-orange-600 transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
               </ul>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-stone-400 tracking-wide mb-3">GET THE APP</p>
+            <div className="col-span-2 md:col-span-1">
+              <p className="text-xs font-semibold text-orange-600 tracking-[0.16em] mb-4">
+                GET THE APP
+              </p>
               {/* Same real artwork, same not-yet-linked treatment as the
                   homepage's own app preview section (see
                   homepage-landing.tsx) — not publicly listed on either
                   store yet, so no real href until there's a real
                   destination to send someone to. */}
-              <div className="flex flex-row gap-2">
-                <span className="cursor-not-allowed opacity-90">
-                  <Image src="/apple-appstore-logo.png" alt="Download on the App Store — coming soon" width={135} height={45} className="h-9 w-auto" />
+              <p className="text-sm leading-6 text-stone-500 mb-4">Nriya for iOS and Android is coming soon.</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="cursor-not-allowed opacity-80">
+                  <Image
+                    src="/apple-appstore-logo.png"
+                    alt="Download on the App Store — coming soon"
+                    width={135}
+                    height={45}
+                    className="h-9 w-auto"
+                  />
                 </span>
-                <span className="cursor-not-allowed opacity-90">
-                  <Image src="/google_play_logo.png" alt="Get it on Google Play — coming soon" width={152} height={45} className="h-9 w-auto" />
+                <span className="cursor-not-allowed opacity-80">
+                  <Image
+                    src="/google_play_logo.png"
+                    alt="Get it on Google Play — coming soon"
+                    width={152}
+                    height={45}
+                    className="h-9 w-auto"
+                  />
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl px-4 pb-8">
-          <p className="text-xs text-stone-400">© {new Date().getFullYear()} Pre-Meal.</p>
+        <div className="border-t border-stone-200 bg-stone-50">
+          <div className="mx-auto max-w-7xl px-4 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p className="text-xs text-stone-500">© {new Date().getFullYear()} Nriya. All rights reserved.</p>
+            <p className="text-xs text-stone-400">Scheduled food delivery, made simple.</p>
+          </div>
         </div>
       </div>
     </footer>

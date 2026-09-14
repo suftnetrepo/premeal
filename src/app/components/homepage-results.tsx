@@ -87,7 +87,7 @@ export function HomepageResults({
             the hero's own bottom edge instead of getting clipped by it. */}
         <div className="absolute inset-0 overflow-hidden">
           <Image
-            src="/search-result-hero.png"
+            src="/search-result-hero_.png"
             alt=""
             fill
             priority

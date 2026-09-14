@@ -101,7 +101,7 @@ export default async function OrderHistoryPage({
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 w-full">
       <h1 className="text-2xl font-semibold mb-1">Your orders</h1>
-      <p className="text-sm text-gray-500 mb-6">Everything you&apos;ve ordered through Pre-Meal.</p>
+      <p className="text-sm text-gray-500 mb-6">Everything you&apos;ve ordered through Nriya.</p>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-1">
         {FILTERS.map((f) => (

@@ -25,8 +25,8 @@ export async function RestaurantShell({ user, children }: { user: User; children
             {/* h-full (not the parent's items-center default sizing) so the
                 tappable area is the whole 56px-tall header slot, not just
                 the 24px the logo glyph + text happen to render at. */}
-            <Link href="/restaurant/dashboard" className="h-full font-bold text-stone-900 flex items-center gap-1.5">
-              <Image src="/logo.png" alt="" width={22} height={22} /> Pre-Meal
+            <Link href="/restaurant/dashboard" className="h-full font-bold text-stone-900 flex items-center gap-0.5">
+              <Image src="/logo.png" alt="" width={22} height={22} className="-mr-1" /> Nriya
             </Link>
             <div className="flex items-center gap-3">
               {restaurant && (

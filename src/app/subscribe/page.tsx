@@ -63,7 +63,7 @@ export default function SubscribePage() {
 
   return (
     <main className="mx-auto max-w-md px-4 py-10 w-full">
-      <h1 className="text-2xl font-semibold mb-1">Pre-Meal+</h1>
+      <h1 className="text-2xl font-semibold mb-1">Nriya+</h1>
       <p className="text-sm text-gray-500 mb-6">Free delivery and 5% off every order.</p>
 
       {justReturnedFromCheckout && !isActive && (
@@ -102,7 +102,7 @@ export default function SubscribePage() {
         </div>
       ) : !available ? (
         <div className="border border-gray-200 bg-gray-50 rounded-xl p-4">
-          <p className="text-sm text-gray-600">Pre-Meal+ isn&apos;t available to new subscribers right now.</p>
+          <p className="text-sm text-gray-600">Nriya+ isn&apos;t available to new subscribers right now.</p>
         </div>
       ) : (
         <div className="border border-gray-200 rounded-xl p-4">

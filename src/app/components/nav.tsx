@@ -19,8 +19,8 @@ export async function Nav() {
   return (
     <NavShell>
       <div className="mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="font-bold text-stone-900 flex items-center gap-1.5">
-          <Image src="/logo.png" alt="" width={48} height={48} /> Pre-Meal
+        <Link href="/" className="font-bold text-stone-900 flex items-center gap-0.5">
+          <Image src="/logo.png" alt="" width={80} height={80} className="-mr-1.5" /> Nriya
         </Link>
 
         {user ? (
@@ -49,7 +49,7 @@ export async function Nav() {
                 </Link>
                 {(subscriptionsEnabled || hasExistingSubscription) && (
                   <Link href="/subscribe" className="text-sm text-stone-500 hover:text-stone-900 transition-colors hidden sm:inline">
-                    Pre-Meal+
+                    Nriya+
                   </Link>
                 )}
               </>
