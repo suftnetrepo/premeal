@@ -1,0 +1,60 @@
+name: Branch protection and CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - "**"
+  merge_group:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  enforce-branch-policy:
+    name: Enforce branch policy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Block direct pushes to main
+        run: |
+          echo "Direct pushes to main are blocked."
+          echo "Create a feature branch, open a pull request, and wait for CI to pass before merging."
+          exit 1
+
+  ci:
+    name: CI pipeline
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run production build
+        run: npm run build
+
+# GitHub branch protection settings needed in the repo:
+# - Require a pull request before merging for main
+# - Require status checks to pass before merging
+# - Require the "CI pipeline" job to pass
+# - Optionally require branches to be up to date before merging
+# - Optionally require conversation resolution before merge
