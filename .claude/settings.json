@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(psql postgresql://premeal_postgres_user:6b0aIZsKJDJdknjJs3Rixu5hI9gIioaI@dpg-d9gtaosm0tmc7381qffg-a.frankfurt-postgres.render.com/premeal_postgres -c '\\\\d \"Order\"')",
+      "Bash(psql postgresql://premeal_postgres_user:6b0aIZsKJDJdknjJs3Rixu5hI9gIioaI@dpg-d9gtaosm0tmc7381qffg-a.frankfurt-postgres.render.com/premeal_postgres -c ' *)",
+      "Bash(psql postgresql://premeal_postgres_user:6b0aIZsKJDJdknjJs3Rixu5hI9gIioaI@dpg-d9gtaosm0tmc7381qffg-a.frankfurt-postgres.render.com/premeal_postgres -c 'SELECT count\\(*\\) AS total_delivered, count\\(\"payoutSentAt\"\\) AS ever_paid_out FROM \"Order\" WHERE status='\\\\''DELIVERED'\\\\'';')",
+      "Bash(psql postgresql://premeal_postgres_user:6b0aIZsKJDJdknjJs3Rixu5hI9gIioaI@dpg-d9gtaosm0tmc7381qffg-a.frankfurt-postgres.render.com/premeal_postgres -c 'SELECT sum\\(\"restaurantPayoutCents\"\\) AS total_paid_out_pence FROM \"Order\" WHERE \"payoutSentAt\" IS NOT NULL;')"
+    ]
+  }
+}
