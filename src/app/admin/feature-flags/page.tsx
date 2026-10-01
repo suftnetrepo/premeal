@@ -87,7 +87,7 @@ export default function AdminFeatureFlagsPage() {
         ))}
         {flags?.length === 0 && (
           <p className="text-sm text-stone-400">
-            No flags configured yet — everything defaults to enabled until you add one.
+            No flags configured yet — each feature uses its built-in default (subscriptions: off) until you add one.
           </p>
         )}
       </div>

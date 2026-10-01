@@ -1795,9 +1795,14 @@ workflow is actually running and returning `"ok": true`.
 
 Admin-managed at `/admin/feature-flags` — a database-backed on/off switch
 for optional features, no code change or redeploy needed to flip one.
-`src/lib/feature-flags.ts`. A flag with no row in the database yet
-**defaults to enabled**, so adding a new flag later never silently turns
-something off before anyone's configured it.
+`src/lib/feature-flags.ts`. The database row is the source of truth, and
+it's always created explicitly — by the seed and by a migration
+(`00000000000008_add_subscriptions_feature_flag`), so even an unseeded
+production database gets it. If a row is ever missing anyway, the flag falls
+back to its own declared default in `src/lib/feature-flag-definitions.ts`
+(subscriptions: **off**), never a blanket "on" — so a missing row can't
+silently launch a held-back feature. Adding a flag means adding its key,
+its default (a type error otherwise), and a migration that inserts its row.
 
 **Subscriptions ship disabled by default** (seeded that way) — the
 reasoning: a subscription is a retention/monetization lever that only
