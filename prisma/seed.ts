@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/password";
+import { FEATURE_FLAG_DEFAULTS } from "../src/lib/feature-flag-definitions";
 
 const prisma = new PrismaClient();
 
@@ -364,18 +365,17 @@ async function main() {
 
   console.log("Seeded:", { sakura: sakura.name, luigis: luigis.name, kaya: kaya.name, delhiSpice: delhiSpice.name });
 
-  // Subscriptions start disabled — the plan is to introduce Pre-Meal+
-  // once there's real repeat-order data to price it against, not at
-  // launch. Flip it on any time from /admin/feature-flags.
-  await prisma.featureFlag.upsert({
-    where: { key: "subscriptions" },
-    update: {},
-    create: {
-      key: "subscriptions",
-      enabled: false,
-      description: "Pre-Meal+ customer subscriptions (free delivery + 5% off)",
-    },
-  });
+  // One explicit row per flag the code reads, at its declared default —
+  // subscriptions start disabled until there's real repeat-order data to
+  // price Eaneri+ against. Flip any of them from /admin/feature-flags.
+  // update: {} so re-seeding never overrides a value an admin has set.
+  for (const [key, { enabled, description }] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
+    await prisma.featureFlag.upsert({
+      where: { key },
+      update: {},
+      create: { key, enabled, description },
+    });
+  }
 
   // Demo categories, so the category feature is testable without setting
   // any up by hand first.
