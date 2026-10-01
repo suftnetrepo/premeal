@@ -33,6 +33,31 @@ jobs:
     if: github.event_name != 'push' || github.ref != 'refs/heads/main'
     timeout-minutes: 20
 
+    # `npm run build` runs `prisma migrate deploy`, so the build needs a
+    # database. Give it a throwaway Postgres (same major version as
+    # production on Neon) rather than any real database's credentials —
+    # this job runs on unreviewed PR code, which must never migrate
+    # production. Side benefit: every PR proves all migrations apply
+    # cleanly to an empty database.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
