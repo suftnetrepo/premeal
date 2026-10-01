@@ -1,15 +1,15 @@
 export default function DeleteAccountPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-16 w-full">
-      <h1 className="text-2xl font-semibold mb-1">Delete your Nriya account</h1>
-      <p className="text-sm text-stone-400 mb-8">Nriya is developed by Suftnet</p>
+      <h1 className="text-2xl font-semibold mb-1">Delete your Eaneri account</h1>
+      <p className="text-sm text-stone-400 mb-8">Eaneri is developed by Suftnet</p>
 
       <div className="flex flex-col gap-6 text-sm text-stone-600">
         <section>
           <h2 className="text-base font-semibold text-stone-900 mb-2">How to request deletion</h2>
-          <p className="mb-3">In the Nriya app:</p>
+          <p className="mb-3">In the Eaneri app:</p>
           <ol className="list-decimal pl-5 flex flex-col gap-1.5">
-            <li>Open the Nriya app and log in</li>
+            <li>Open the Eaneri app and log in</li>
             <li>Go to the <strong>Account</strong> tab</li>
             <li>
               Scroll down and tap <strong>Delete account</strong>, at the bottom of the screen

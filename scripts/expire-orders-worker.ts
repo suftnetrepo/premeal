@@ -12,7 +12,7 @@
  *    them, releasing capacity — nothing was ever charged, so no refund
  *    is needed;
  *  - retries any emails that failed to send on their first attempt (see
- *    src/lib/email.ts) — the common case (Resend is up) never adds
+ *    src/lib/email.ts) — the common case (Brevo is up) never adds
  *    anything to this queue at all;
  *  - pays out restaurants for delivered orders past their dispute window
  *    via real Stripe Transfers (skipped gracefully if Stripe isn't

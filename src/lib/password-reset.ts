@@ -32,7 +32,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
       passwordResetTokenExpiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60_000),
     },
   });
-  void notifyPasswordReset(updated, token);
+  await notifyPasswordReset(updated, token);
 }
 
 /**

@@ -54,7 +54,7 @@ export default function DriverAcceptInvitePage() {
   return (
     <main className="mx-auto max-w-sm px-4 py-16 w-full">
       <h1 className="text-2xl font-bold mb-1">Set up your driver account</h1>
-      <p className="text-sm text-stone-500 mb-6">You&apos;ve been invited to deliver on Pre-Meal.</p>
+      <p className="text-sm text-stone-500 mb-6">You&apos;ve been invited to deliver on Eaneri.</p>
 
       <form onSubmit={submit} className="flex flex-col gap-3">
         <input

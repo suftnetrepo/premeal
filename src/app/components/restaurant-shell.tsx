@@ -26,7 +26,7 @@ export async function RestaurantShell({ user, children }: { user: User; children
                 tappable area is the whole 56px-tall header slot, not just
                 the 24px the logo glyph + text happen to render at. */}
             <Link href="/restaurant/dashboard" className="h-full font-bold text-stone-900 flex items-center gap-0.5">
-              <Image src="/logo.png" alt="" width={22} height={22} className="-mr-1" /> Nriya
+              <Image src="/logo-wordmark.png" alt="Eaneri" width={613} height={200} priority className="h-7 w-auto" />
             </Link>
             <div className="flex items-center gap-3">
               {restaurant && (

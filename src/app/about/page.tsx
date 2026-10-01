@@ -14,12 +14,12 @@ export default function AboutPage() {
         <div className="absolute -top-24 -right-20 h-72 w-72 rounded-full bg-orange-100/70 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 sm:py-28">
           <div className="max-w-3xl">
-            <p className="mb-5 inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-bold tracking-[0.16em] text-orange-700">ABOUT NRIYA</p>
+            <p className="mb-5 inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-bold tracking-[0.16em] text-orange-700">ABOUT EANERI</p>
             <h1 className="text-4xl font-black tracking-tight text-stone-950 sm:text-6xl sm:leading-[1.05]">
               Food delivery designed around <span className="text-orange-600">your schedule.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-stone-600">
-              Not every meal needs to arrive in twenty minutes. Nriya makes ordering ahead feel simple, dependable and better for everyone involved.
+              Not every meal needs to arrive in twenty minutes. Eaneri makes ordering ahead feel simple, dependable and better for everyone involved.
             </p>
           </div>
         </div>
@@ -33,7 +33,7 @@ export default function AboutPage() {
           </div>
           <div className="space-y-5 text-base leading-7 text-stone-600 sm:text-lg sm:leading-8">
             <p>Sometimes you know exactly when you want to eat: after a meeting ends, when guests arrive, or at the dinner time you already planned around.</p>
-            <p>With Nriya, you order ahead and choose a delivery window. The restaurant then confirms within 30 minutes, giving you confidence in the plan and giving the kitchen time to prepare properly.</p>
+            <p>With Eaneri, you order ahead and choose a delivery window. The restaurant then confirms within 30 minutes, giving you confidence in the plan and giving the kitchen time to prepare properly.</p>
           </div>
         </div>
 
@@ -52,7 +52,7 @@ export default function AboutPage() {
         <div className="flex flex-col items-start justify-between gap-7 rounded-3xl border border-stone-200 bg-[#F7F4EE] px-6 py-9 text-stone-900 sm:px-10 md:flex-row md:items-center">
           <div>
             <p className="text-xs font-bold tracking-[0.16em] text-orange-700">READY WHEN YOU ARE</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Plan your next meal with Nriya.</h2>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Plan your next meal with Eaneri.</h2>
           </div>
           <Link href="/" className="inline-flex shrink-0 items-center gap-2 rounded-full bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-700">Find restaurants <ArrowRight size={16} /></Link>
         </div>

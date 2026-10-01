@@ -130,7 +130,7 @@ export class BrevoEmailSender {
       throw new Error(`Validation failed: ${validationErrors.join(", ")}`);
     }
 
-    const recipients = params.to.map((r) => r.email).join(",");
+    const recipientCount = params.to.length;
 
     try {
       const email = new SendSmtpEmail();
@@ -145,7 +145,7 @@ export class BrevoEmailSender {
 
       if (this.options.logErrors) {
         console.log(
-          `[brevo] API call succeeded — to=${recipients} subject="${params.subject}" messageId=${result.body.messageId ?? "n/a"}`
+          `[brevo] API call succeeded — recipients=${recipientCount} messageId=${result.body.messageId ?? "n/a"}`
         );
       }
       return { success: true, messageId: result.body.messageId };
@@ -157,7 +157,7 @@ export class BrevoEmailSender {
         if (this.options.logErrors) {
           console.warn(
             `[brevo] API call failed (attempt ${retryCount + 1}/${this.options.maxRetries}) — ` +
-              `to=${recipients} subject="${params.subject}" status=${status ?? "n/a"} error="${message}" — retrying...`
+              `recipients=${recipientCount} status=${status ?? "n/a"} error="${message}" — retrying...`
           );
         }
         await this.sleep(this.options.retryDelay * (retryCount + 1));
@@ -166,7 +166,7 @@ export class BrevoEmailSender {
 
       if (this.options.logErrors) {
         console.error(
-          `[brevo] API call FAILED (final) — to=${recipients} subject="${params.subject}" status=${status ?? "n/a"} error="${message}"`
+          `[brevo] API call FAILED (final) — recipients=${recipientCount} status=${status ?? "n/a"} error="${message}"`
         );
       }
       return { success: false, error: message, status, retryCount };

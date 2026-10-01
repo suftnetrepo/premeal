@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { BrevoEmailSender } from "@/lib/brevo-email-sender";
+import { htmlToText } from "@/lib/email-template";
 
 export class EmailNotConfiguredError extends Error {
   constructor() {
@@ -36,28 +37,29 @@ function envPresence(): { hasApiKey: boolean; hasFromEmail: boolean } {
 async function sendViaBrevo(to: string, subject: string, html: string, context: string): Promise<void> {
   const { hasApiKey, hasFromEmail } = envPresence();
   console.log(
-    `[email] send attempt — context="${context}" to=${to} subject="${subject}" ` +
+    `[email] send attempt — context="${context}" recipient=${maskEmail(to)} ` +
       `BREVO_API_KEY=${hasApiKey ? "present" : "MISSING"} BREVO_FROM_EMAIL=${hasFromEmail ? "present" : "MISSING"}`
   );
 
   const sender = getSender();
   const result = await sender.sendEmail({
     to: [{ email: to }],
-    sender: { name: "Pre-Meal", email: fromAddress() },
+    sender: { name: process.env.BREVO_FROM_NAME || "Eaneri", email: fromAddress() },
     subject,
     htmlContent: html,
+    textContent: htmlToText(html),
   });
 
   if (!result.success) {
     console.error(
-      `[email] send FAILED — context="${context}" to=${to} subject="${subject}" ` +
+      `[email] send FAILED — context="${context}" recipient=${maskEmail(to)} ` +
         `status=${result.status ?? "n/a"} error="${result.error}"`
     );
-    throw new Error(`Brevo error sending to ${to}: ${result.error}`);
+    throw new Error(`Brevo send failed: ${result.error}`);
   }
 
   console.log(
-    `[email] send SUCCEEDED — context="${context}" to=${to} subject="${subject}" messageId=${result.messageId ?? "n/a"}`
+    `[email] send SUCCEEDED — context="${context}" recipient=${maskEmail(to)} messageId=${result.messageId ?? "n/a"}`
   );
 }
 
@@ -82,14 +84,14 @@ export async function sendEmail(to: string, subject: string, html: string, conte
       // EmailQueueItem either). Exactly the silent-failure signature this
       // logging exists to catch.
       console.error(
-        `[email] send ABORTED — context="${context}" to=${to} subject="${subject}" reason="BREVO_API_KEY or BREVO_FROM_EMAIL not set"`
+        `[email] send ABORTED — context="${context}" recipient=${maskEmail(to)} reason="BREVO_API_KEY or BREVO_FROM_EMAIL not set"`
       );
       throw err;
     }
 
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(
-      `[email] send failed after retries, queueing for later — context="${context}" to=${to} subject="${subject}" error="${message}"`
+      `[email] send failed after retries, queueing for later — context="${context}" recipient=${maskEmail(to)} error="${message}"`
     );
     try {
       await prisma.emailQueueItem.create({
@@ -140,7 +142,7 @@ export async function processEmailQueue(): Promise<{ sent: number; failed: numbe
       });
       if (exhausted) {
         gaveUp++;
-        console.error(`[email-queue] Giving up on email to ${item.to} after ${attempts} attempts:`, message);
+        console.error(`[email-queue] Giving up on email to ${maskEmail(item.to)} after ${attempts} attempts:`, message);
       } else {
         failed++;
       }
@@ -148,4 +150,10 @@ export async function processEmailQueue(): Promise<{ sent: number; failed: numbe
   }
 
   return { sent, failed, gaveUp };
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return "invalid-address";
+  return `${local.slice(0, 1)}***@${domain}`;
 }

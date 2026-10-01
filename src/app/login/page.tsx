@@ -51,7 +51,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell eyebrow="WELCOME BACK" title="Log in to Nriya" description="Continue to your orders, saved addresses or restaurant workspace.">
+    <AuthShell eyebrow="WELCOME BACK" title="Log in to Eaneri" description="Continue to your orders, saved addresses or restaurant workspace.">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="mb-2 block text-sm font-semibold text-stone-800">Email address</label>
@@ -79,7 +79,7 @@ export default function LoginPage() {
           {submitting ? "Logging in…" : <>Log in <ArrowRight size={17} /></>}
         </button>
       </form>
-      <p className="mt-5 text-center text-sm text-stone-600">New to Nriya? <Link href="/signup" className="font-bold text-orange-700 hover:text-orange-800">Create an account</Link></p>
+      <p className="mt-5 text-center text-sm text-stone-600">New to Eaneri? <Link href="/signup" className="font-bold text-orange-700 hover:text-orange-800">Create an account</Link></p>
       {process.env.NODE_ENV === "development" && (
         <aside className="mt-5 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-3 text-xs leading-5 text-stone-500">
           <p className="font-bold text-stone-700">Development demo accounts</p>

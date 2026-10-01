@@ -1,16 +1,43 @@
 import { prisma } from "@/lib/db";
 import { sendEmail, EmailNotConfiguredError } from "@/lib/email";
 import { formatMoney, formatDate } from "@/lib/format";
+import { appUrl, emailButton, emailShell, escapeHtml } from "@/lib/email-template";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const APP_URL = appUrl("");
 
-function wrap(bodyHtml: string): string {
-  return `
-    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #111;">
-      <p style="color: #D85A30; font-weight: 600; margin-bottom: 16px;">Pre-Meal</p>
-      ${bodyHtml}
-    </div>
-  `;
+function wrap(bodyHtml: string, subject: string): string {
+  const polishedBody = sanitizeTemplateHtml(bodyHtml).replace(
+    /<p>\s*<a href="([^"]+)">([^<]+)<\/a>\s*<\/p>/g,
+    (_match, href: string, label: string) => emailButton(label, href)
+  );
+  return emailShell(
+    `<p style="margin:0 0 8px;color:#C94F2D;font-size:12px;line-height:18px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase">Eaneri update</p>
+     <h1 style="margin:0 0 22px;color:#191815;font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:39px;font-weight:700;letter-spacing:-.4px">${escapeHtml(subject)}</h1>
+     ${polishedBody}`,
+    subject
+  );
+}
+
+/** Keep the small markup vocabulary used by these templates while removing injected tags/attributes from DB content. */
+function sanitizeTemplateHtml(html: string): string {
+  return html.replace(/<(\/?)([a-z0-9]+)([^>]*)>/gi, (_tag, closing: string, rawName: string, attrs: string) => {
+    const name = rawName.toLowerCase();
+    if (name === "br") return "<br>";
+    if (name === "strong") return closing ? "</strong>" : "<strong>";
+    if (name === "p") {
+      if (closing) return "</p>";
+      const isMutedNote = /font-size\s*:\s*12px/i.test(attrs);
+      return isMutedNote ? '<p style="color:#817A72;font-size:13px;line-height:20px">' : "<p>";
+    }
+    if (name === "a") {
+      if (closing) return "</a>";
+      const href = attrs.match(/href\s*=\s*["']([^"']+)["']/i)?.[1] ?? "";
+      return /^https?:\/\//i.test(href)
+        ? `<a href="${escapeHtml(href)}" style="color:#C94F2D;font-weight:700;text-decoration:underline">`
+        : "<a>";
+    }
+    return "";
+  });
 }
 
 /**
@@ -23,10 +50,10 @@ function wrap(bodyHtml: string): string {
  */
 async function safeSend(to: string, subject: string, html: string, context: string) {
   try {
-    await sendEmail(to, subject, wrap(html), context);
+    await sendEmail(to, subject, wrap(html, subject), context);
   } catch (err) {
     if (err instanceof EmailNotConfiguredError) return;
-    console.error(`[notifications] "${context}" to ${to} failed:`, err);
+    console.error(`[notifications] "${context}" failed:`, err);
   }
 }
 
@@ -446,9 +473,9 @@ export async function notifyDriverInvite(email: string, restaurantName: string, 
   try {
     await safeSend(
       email,
-      `${restaurantName} invited you to deliver on Pre-Meal`,
+      `${restaurantName} invited you to deliver on Eaneri`,
       `<p>Hi,</p>
-       <p>${restaurantName} has invited you to be one of their delivery drivers on Pre-Meal.</p>
+       <p>${restaurantName} has invited you to be one of their delivery drivers on Eaneri.</p>
        <p><a href="${APP_URL}/driver/accept-invite?token=${token}">Set up your driver account</a></p>
        <p style="color:#888; font-size: 12px;">This link expires in 72 hours. If you weren't expecting this, you can ignore this email.</p>`,
       "driver invite"
@@ -468,7 +495,7 @@ export async function notifyDriverAssociationRequest(
       driver.email,
       `${restaurantName} wants to add you as a driver`,
       `<p>Hi ${driver.name},</p>
-       <p>${restaurantName} would like to add you to their delivery driver roster on Pre-Meal.</p>
+       <p>${restaurantName} would like to add you to their delivery driver roster on Eaneri.</p>
        <p><a href="${APP_URL}/driver/dashboard">Review this request</a></p>
        <p style="color:#888; font-size: 12px;">Reference: ${associationId}</p>`,
       "driver association request"

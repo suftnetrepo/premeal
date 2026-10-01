@@ -96,7 +96,7 @@ export default async function RestaurantDashboardPage({
     },
     {
       done: isApproved,
-      label: "Get approved by Nriya",
+      label: "Get approved by Eaneri",
       detail: isApproved ? null : "We review new restaurants before they go live",
       href: null, // nothing to click — this one's on us, not the owner
     },

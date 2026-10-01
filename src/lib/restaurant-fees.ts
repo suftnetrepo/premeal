@@ -34,7 +34,7 @@ export async function createSignupFeeCheckoutSession(restaurant: Restaurant): Pr
           currency: "gbp",
           unit_amount: SIGNUP_FEE_CENTS,
           product_data: {
-            name: "Pre-Meal restaurant signup fee",
+            name: "Eaneri restaurant signup fee",
             description: "One-time, not recurring. Ongoing costs are commission per order only.",
           },
         },

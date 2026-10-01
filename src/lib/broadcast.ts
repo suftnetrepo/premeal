@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { emailShell, escapeHtml } from "@/lib/email-template";
 
 export type BroadcastAudience = "CUSTOMER" | "RESTAURANT_OWNER" | "ALL";
 
@@ -20,12 +21,12 @@ export async function sendBroadcast(
     take: MAX_RECIPIENTS,
   });
 
-  const html = `
-    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <p style="color: #D85A30; font-weight: 600; margin-bottom: 4px;">Pre-Meal</p>
-      <div style="white-space: pre-wrap; color: #111;">${escapeHtml(message)}</div>
-    </div>
-  `;
+  const html = emailShell(
+    `<p style="margin:0 0 8px;color:#C94F2D;font-size:12px;line-height:18px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase">From Eaneri</p>
+     <h1 style="margin:0 0 22px;color:#191815;font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:39px;font-weight:700;letter-spacing:-.4px">${escapeHtml(subject)}</h1>
+     <div style="white-space:pre-wrap;color:#3F3B36">${escapeHtml(message)}</div>`,
+    subject
+  );
 
   let sent = 0;
   let failed = 0;
@@ -35,18 +36,10 @@ export async function sendBroadcast(
       await sendEmail(recipient.email, subject, html);
       sent++;
     } catch (err) {
-      console.error(`[broadcast] Failed to send to ${recipient.email}:`, err);
+      console.error("[broadcast] Failed to send to a recipient:", err);
       failed++;
     }
   }
 
   return { sent, failed, totalRecipients: recipients.length };
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br />");
 }
