@@ -663,7 +663,7 @@ enum EmailQueueStatus {
 }
 
 // Retry queue for emails that failed to send on the first (synchronous)
-// attempt — see sendEmail() in src/lib/email.ts. The common case (Resend
+// attempt — see sendEmail() in src/lib/email.ts. The common case (Brevo
 // is up) never touches this table at all; it only exists for the
 // transient-outage case, so a flaky send doesn't just silently vanish.
 // Swept by the same worker that runs every other background job in this

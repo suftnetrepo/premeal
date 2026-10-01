@@ -17,7 +17,7 @@ export default function HowItWorksPage() {
             Order ahead. Eat <span className="text-orange-600">right on time.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-stone-600">
-            Nriya replaces the rush with a simple scheduled journey—from choosing your slot to receiving your meal.
+            Eaneri replaces the rush with a simple scheduled journey—from choosing your slot to receiving your meal.
           </p>
         </div>
       </section>

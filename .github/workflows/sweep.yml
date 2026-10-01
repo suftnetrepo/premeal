@@ -22,6 +22,7 @@ jobs:
     steps:
       - name: Call the sweep endpoint
         run: |
-          curl -sf "${{ vars.APP_URL }}/api/cron/sweep?secret=${{ secrets.CRON_SECRET }}" \
+          curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.APP_URL }}/api/cron/sweep" \
             -o response.json -w "\nHTTP %{http_code}\n"
           cat response.json

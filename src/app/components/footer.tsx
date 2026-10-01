@@ -103,9 +103,8 @@ export function Footer() {
       <div className="border-t border-stone-200 bg-white text-stone-900">
         <div className="mx-auto max-w-7xl px-4 py-12 lg:py-14 grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-12 lg:gap-16">
           <div className="max-w-sm">
-            <div className="inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-stone-50 py-2 pr-4 pl-2">
-              <Image src="/logo.png" alt="" width={46} height={46} className="-mr-1" />
-              <p className="text-2xl font-bold tracking-tight leading-none">Nriya</p>
+            <div className="inline-flex items-center rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2">
+              <Image src="/logo-wordmark.png" alt="Eaneri" width={613} height={200} className="h-11 w-auto" />
             </div>
             <p className="text-base leading-7 text-stone-600 mt-5 max-w-xs">
               Better meals begin with better timing. Order ahead and enjoy food prepared for your schedule.
@@ -181,7 +180,7 @@ export function Footer() {
                   homepage-landing.tsx) — not publicly listed on either
                   store yet, so no real href until there's a real
                   destination to send someone to. */}
-              <p className="text-sm leading-6 text-stone-500 mb-4">Nriya for iOS and Android is coming soon.</p>
+              <p className="text-sm leading-6 text-stone-500 mb-4">Eaneri for iOS and Android is coming soon.</p>
               <div className="flex flex-wrap gap-2">
                 <span className="cursor-not-allowed opacity-80">
                   <Image
@@ -208,7 +207,7 @@ export function Footer() {
 
         <div className="border-t border-stone-200 bg-stone-50">
           <div className="mx-auto max-w-7xl px-4 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <p className="text-xs text-stone-500">© {new Date().getFullYear()} Nriya. All rights reserved.</p>
+            <p className="text-xs text-stone-500">© {new Date().getFullYear()} Eaneri. All rights reserved.</p>
             <p className="text-xs text-stone-400">Scheduled food delivery, made simple.</p>
           </div>
         </div>

@@ -14,9 +14,8 @@ export class InvalidTokenError extends Error {
 
 /**
  * Generates a fresh token (invalidating any previous one — only the most
- * recently sent link works) and emails it. Fire-and-forget from the
- * caller's point of view: verification is non-blocking, so a failed send
- * here shouldn't fail signup.
+ * recently sent link works) and waits until the notification has either
+ * sent or been handed to the durable email retry queue.
  */
 export async function sendVerificationEmail(user: User): Promise<void> {
   const { token, tokenHash } = generateToken();
@@ -27,7 +26,7 @@ export async function sendVerificationEmail(user: User): Promise<void> {
       emailVerificationTokenExpiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60_000),
     },
   });
-  void notifyEmailVerification(updated, token);
+  await notifyEmailVerification(updated, token);
 }
 
 /** Consumes a verification token from the emailed link. Idempotent-ish: an already-verified user just returns them. */

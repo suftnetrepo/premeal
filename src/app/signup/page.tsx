@@ -58,7 +58,7 @@ export default function SignupPage() {
   }
 
   return (
-    <AuthShell eyebrow="JOIN NRIYA" title="Create your account" description="Choose how you’ll use Nriya, then tell us a little about yourself.">
+    <AuthShell eyebrow="JOIN EANERI" title="Create your account" description="Choose how you’ll use Eaneri, then tell us a little about yourself.">
       <div className="grid grid-cols-2 gap-2 rounded-2xl bg-stone-100 p-1.5" role="group" aria-label="Account type">
         <button
           type="button"

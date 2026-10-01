@@ -95,7 +95,7 @@ export async function POST(request: Request) {
   });
 
   await setSessionCookie(user.id, user.sessionVersion);
-  void sendVerificationEmail(user);
+  await sendVerificationEmail(user);
 
   const token = createAuthToken(user.id, user.sessionVersion);
 
