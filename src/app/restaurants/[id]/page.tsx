@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,8 +9,57 @@ import { OrderForm } from "./order-form";
 import { StarDisplay } from "@/app/components/stars";
 import { HygieneBadge } from "@/app/components/hygiene-badge";
 import { getBookableSlots } from "@/lib/delivery-slots";
+import { absoluteUrl, jsonLdString, NOINDEX, SITE_NAME } from "@/lib/seo";
 
 export const dynamic = "force-dynamic"; // capacity must always be fresh, never cached
+
+async function getPublicRestaurant(id: string) {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id },
+    select: {
+      name: true,
+      cuisine: true,
+      description: true,
+      imageUrl: true,
+      address: true,
+      phone: true,
+      isActive: true,
+      approvalStatus: true,
+      signupFeePaidAt: true,
+      averageRating: true,
+      reviewCount: true,
+    },
+  });
+  if (!restaurant || restaurant.approvalStatus !== "APPROVED" || !restaurant.signupFeePaidAt) return null;
+  return restaurant;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const restaurant = await getPublicRestaurant(id);
+  if (!restaurant) return { title: "Restaurant not found", robots: NOINDEX };
+
+  const title = `${restaurant.name} — ${restaurant.cuisine} food delivery`;
+  const description =
+    restaurant.description?.trim().slice(0, 155) ||
+    `Order ${restaurant.cuisine} food from ${restaurant.name} for scheduled delivery. Pick your day and time slot on ${SITE_NAME}.`;
+  const path = `/restaurants/${id}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    robots: restaurant.isActive ? undefined : NOINDEX,
+    openGraph: {
+      type: "website",
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      url: path,
+      ...(restaurant.imageUrl ? { images: [{ url: restaurant.imageUrl, alt: restaurant.name }] } : {}),
+    },
+    twitter: { card: "summary_large_image", title, description, ...(restaurant.imageUrl ? { images: [restaurant.imageUrl] } : {}) },
+  };
+}
 
 export default async function RestaurantPage({
   params,
@@ -77,8 +127,31 @@ export default async function RestaurantPage({
   // these are two separate, both-must-pass checks.
   const slots = getBookableSlots(restaurant.deliverySlots, restaurant.minimumLeadTimeDays);
 
+  const restaurantJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Restaurant",
+    "@id": absoluteUrl(`/restaurants/${id}#restaurant`),
+    name: restaurant.name,
+    url: absoluteUrl(`/restaurants/${id}`),
+    servesCuisine: restaurant.cuisine,
+    ...(restaurant.description ? { description: restaurant.description } : {}),
+    ...(restaurant.imageUrl ? { image: restaurant.imageUrl } : {}),
+    ...(restaurant.address ? { address: restaurant.address } : {}),
+    ...(restaurant.phone ? { telephone: restaurant.phone } : {}),
+    ...(restaurant.averageRating !== null && restaurant.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(restaurant.averageRating.toFixed(1)),
+            reviewCount: restaurant.reviewCount,
+          },
+        }
+      : {}),
+  };
+
   return (
     <main className="w-full">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(restaurantJsonLd) }} />
       {/* Hero banner — the restaurant's own uploaded photo if they have one
           (see /restaurant/location), otherwise a quiet icon placeholder.
           Constrained to the same width as the nav/content below rather

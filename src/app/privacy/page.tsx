@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "How Eaneri collects, uses and protects your personal data.",
+  alternates: { canonical: "/privacy" },
+  openGraph: { title: "Privacy Policy | Eaneri", description: "How Eaneri collects, uses and protects your personal data.", url: "/privacy" },
+};
+
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-16 w-full">

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CalendarClock, CheckCircle2, Truck } from "lucide-react";
 
@@ -6,6 +7,13 @@ const steps = [
   { number: "02", icon: CheckCircle2, iconClass: "bg-emerald-100 text-emerald-700", numberClass: "text-emerald-100", title: "The restaurant confirms", copy: "The restaurant has 30 minutes to confirm it can prepare your order for that slot. Your card is charged only when they accept." },
   { number: "03", icon: Truck, iconClass: "bg-sky-100 text-sky-700", numberClass: "text-sky-100", title: "Follow it to your door", copy: "Track the order as it is prepared, sent out and delivered within your chosen window." },
 ];
+
+export const metadata: Metadata = {
+  title: "How scheduled food delivery works",
+  description: "Choose a restaurant, pick your delivery day and window, and the kitchen confirms within 30 minutes. Your card is only charged when they accept.",
+  alternates: { canonical: "/how-it-works" },
+  openGraph: { title: "How scheduled food delivery works | Eaneri", description: "Choose a restaurant, pick your delivery day and window, and the kitchen confirms within 30 minutes. Your card is only charged when they accept.", url: "/how-it-works" },
+};
 
 export default function HowItWorksPage() {
   return (

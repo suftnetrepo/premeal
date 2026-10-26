@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "The terms that apply when you order through, or sell on, Eaneri.",
+  alternates: { canonical: "/terms" },
+  openGraph: { title: "Terms of Service | Eaneri", description: "The terms that apply when you order through, or sell on, Eaneri.", url: "/terms" },
+};
+
 export default function TermsPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-16 w-full">
