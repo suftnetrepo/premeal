@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Food safety & hygiene standards",
+  description: "Every Eaneri restaurant is registered and verified. Learn how we check food hygiene registration and display optional advanced hygiene certificates.",
+  alternates: { canonical: "/food-safety" },
+  openGraph: { title: "Food safety & hygiene standards | Eaneri", description: "Every Eaneri restaurant is registered and verified. Learn how we check food hygiene registration and display optional advanced hygiene certificates.", url: "/food-safety" },
+};
 
 export default function FoodSafetyPage() {
   return (

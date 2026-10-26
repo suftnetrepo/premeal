@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Store, UtensilsCrossed } from "lucide-react";
 
@@ -6,6 +7,13 @@ const principles = [
   { icon: UtensilsCrossed, iconClass: "bg-emerald-100 text-emerald-700", title: "Give kitchens clarity", copy: "Restaurants receive a real scheduled order and confirm they can prepare it for the time you selected." },
   { icon: Store, iconClass: "bg-sky-100 text-sky-700", title: "Keep restaurants sustainable", copy: "Restaurants keep their full delivery fee and pay commission only on food they actually sell." },
 ];
+
+export const metadata: Metadata = {
+  title: "About us — food delivery built around your schedule",
+  description: "Eaneri makes ordering ahead simple: scheduled food delivery that gives you flexibility and lets restaurants keep their full delivery fee.",
+  alternates: { canonical: "/about" },
+  openGraph: { title: "About us — food delivery built around your schedule | Eaneri", description: "Eaneri makes ordering ahead simple: scheduled food delivery that gives you flexibility and lets restaurants keep their full delivery fee.", url: "/about" },
+};
 
 export default function AboutPage() {
   return (
