@@ -22,7 +22,11 @@ jobs:
     steps:
       - name: Call the sweep endpoint
         run: |
-          curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          # Render may return 503 while the service is cold-starting or
+          # redeploying, so retry (503 is retried by --retry) for ~2 min.
+          curl -sf --retry 6 --retry-delay 20 --retry-connrefused \
+            --max-time 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ vars.APP_URL }}/api/cron/sweep" \
             -o response.json -w "\nHTTP %{http_code}\n"
           cat response.json
